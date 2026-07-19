@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Saira:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: transparent;
+            font-family: "Saira", "Segoe UI", Arial, sans-serif;
+        }
+
+        a.banner-wrap {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            width: 100%;
+            max-width: 728px;
+            min-height: 90px;
+            background: linear-gradient(135deg, #064d06 0%, #0d8a0d 45%, #085c08 100%);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            margin: 0 auto;
+        }
+
+        a.banner-wrap::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(110deg, transparent 20%, rgba(255,255,255,0.07) 50%, transparent 80%);
+            animation: shimmer 3.5s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes shimmer {
+            0%   { transform: translateX(-120%); }
+            100% { transform: translateX(120%); }
+        }
+
+        /* ── DESKTOP (≥480px) ── */
+        .layout-desktop {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 12px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .ad-left {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .ad-icon {
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.13);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            border: 1px solid rgba(255,255,255,0.18);
+            margin-top: 2px;
+        }
+
+        .ad-text { min-width: 0; flex: 1; }
+
+        /* Badge column — tournament name on top, status below */
+        .ad-badge {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 3px;
+            margin-bottom: 6px;
+        }
+
+        .live-dot {
+            display: inline-block;
+            width: 7px; height: 7px;
+            background: #ff3b3b;
+            border-radius: 50%;
+            box-shadow: 0 0 7px #ff3b3b;
+            animation: blink 1.1s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1;   box-shadow: 0 0 7px #ff3b3b; }
+            50%       { opacity: 0.3; box-shadow: 0 0 3px #ff3b3b; }
+        }
+
+        .badge-status {
+            font-size: 0.58rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.85);
+        }
+
+        .badge-league {
+            display: inline-block;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 20px;
+            padding: 2px 9px;
+            font-size: 0.56rem;
+            font-weight: 700;
+            color: #fff;
+            white-space: nowrap;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Match display */
+        .match-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+            min-width: 0;
+        }
+
+        .team-block {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .team-badge {
+            width: 26px; height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.55rem;
+            font-weight: 800;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        /* Show initials badge with a subtle circle only when there's no flag */
+        .team-badge:not(:has(img)) {
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .team-badge img {
+            width: 100%; height: 100%;
+            object-fit: contain;
+        }
+
+        .team-name {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 130px;
+        }
+
+        .vs-sep {
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: rgba(255,255,255,0.5);
+            flex-shrink: 0;
+        }
+
+        /* Score (shown when live) */
+        .live-score {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(255,50,50,0.2);
+            border: 1px solid rgba(255,100,100,0.4);
+            border-radius: 6px;
+            padding: 2px 8px;
+            flex-shrink: 0;
+        }
+
+        .score-num {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #fff;
+            line-height: 1;
+        }
+
+        .score-dash {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        /* Kickoff time for upcoming */
+        .match-time {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: rgba(255,255,255,0.7);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        /* Divider */
+        .ad-divider {
+            width: 1px;
+            align-self: stretch;
+            background: rgba(255,255,255,0.18);
+            flex-shrink: 0;
+            margin: 0 16px;
+        }
+
+        /* CTA */
+        .ad-cta { flex: 0 0 auto; }
+
+        .ad-cta-btn {
+            display: block;
+            background: #fff;
+            color: #065406;
+            font-size: 0.63rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border-radius: 20px;
+            padding: 8px 18px;
+            white-space: nowrap;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            text-align: center;
+        }
+
+        a.banner-wrap:hover .ad-cta-btn {
+            transform: scale(1.05);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+        }
+
+        /* Pagination dots */
+        .match-dots {
+            display: flex;
+            gap: 4px;
+            margin-top: 5px;
+        }
+
+        .match-dot {
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.25);
+            transition: background 0.3s;
+        }
+
+        .match-dot.active { background: rgba(255,255,255,0.8); }
+
+        /* ── MOBILE (<480px) ── */
+        .layout-mobile { display: none; }
+
+        @media (max-width: 479px) {
+            a.banner-wrap { max-width: 100%; border-radius: 8px; }
+            .layout-desktop { display: none; }
+
+            .layout-mobile {
+                display: flex;
+                align-items: center;
+                width: 100%;
+                padding: 11px 13px;
+                gap: 10px;
+                position: relative;
+                z-index: 1;
+            }
+
+            .mob-icon {
+                width: 38px; height: 38px;
+                border-radius: 50%;
+                background: rgba(255,255,255,0.13);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                border: 1px solid rgba(255,255,255,0.18);
+            }
+
+            .mob-body { flex: 1; min-width: 0; }
+
+            .mob-badge {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 3px;
+                margin-bottom: 4px;
+            }
+
+            .mob-status {
+                font-size: 0.54rem;
+                font-weight: 800;
+                letter-spacing: 2px;
+                text-transform: uppercase;
+                color: rgba(255,255,255,0.85);
+            }
+
+            .mob-league {
+                font-size: 0.52rem;
+                font-weight: 700;
+                background: rgba(255,255,255,0.15);
+                border: 1px solid rgba(255,255,255,0.25);
+                border-radius: 12px;
+                padding: 1px 7px;
+                color: #fff;
+                max-width: 130px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .mob-match {
+                font-size: 0.78rem;
+                font-weight: 700;
+                color: #fff;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .mob-time {
+                font-size: 0.6rem;
+                color: rgba(255,255,255,0.65);
+                margin-top: 1px;
+            }
+
+            .mob-btn {
+                flex-shrink: 0;
+                background: #fff;
+                color: #065406;
+                font-size: 0.57rem;
+                font-weight: 800;
+                letter-spacing: 0.8px;
+                text-transform: uppercase;
+                border-radius: 14px;
+                padding: 8px 11px;
+                text-align: center;
+                line-height: 1.3;
+                white-space: nowrap;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                align-self: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a class="banner-wrap" id="bannerLink" href="#XUDOFootball" target="_blank" rel="noopener">
+
+        <!-- ── DESKTOP ── -->
+        <div class="layout-desktop" id="default-desktop">
+            <div class="ad-left">
+                <div class="ad-text">
+                    <div class="ad-badge">
+                        <span class="badge-league" id="dsk-league" style="display:none"></span>
+                        <span class="badge-status" id="dsk-status">Live Now</span>
+                    </div>
+                    <div class="match-row" id="dsk-match">
+                        <div class="team-block">
+                            <div class="team-badge" id="dsk-home-badge">?</div>
+                            <span class="team-name" id="dsk-home">Loading…</span>
+                        </div>
+                        <span class="vs-sep" id="dsk-vs">vs</span>
+                        <div class="team-block">
+                            <div class="team-badge" id="dsk-away-badge">?</div>
+                            <span class="team-name" id="dsk-away"></span>
+                        </div>
+                        <span class="match-time" id="dsk-time"></span>
+                    </div>
+                    <div class="match-dots" id="dsk-dots"></div>
+                </div>
+            </div>
+            <div class="ad-divider"></div>
+            <div class="ad-cta">
+                <span class="ad-cta-btn" id="dsk-btn">Watch Free →</span>
+            </div>
+        </div>
+
+        <!-- ── MOBILE ── -->
+        <div class="layout-mobile" id="default-mobile">
+            <div class="mob-body">
+                <div class="mob-badge">
+                    <span class="mob-league" id="mob-league" style="display:none"></span>
+                    <span class="mob-status" id="mob-status">Live Now</span>
+                </div>
+                <div class="mob-match" id="mob-match">Loading matches…</div>
+                <div class="mob-time" id="mob-time"></div>
+            </div>
+            <div class="mob-btn" id="mob-btn">Watch Free →</div>
+        </div>
+
+    </a>
+
+    <script>
+    (function () {
+        'use strict';
+
+        // ── Target URL (ganti dengan domain XUDOFootball setelah live) ──
+        const XUDO_FOOTBALL_URL = 'https://xudofootball.pages.dev';
+
+        const lang = localStorage.getItem('xudo_lang') || 'en-US';
+
+        document.getElementById('bannerLink').href = XUDO_FOOTBALL_URL;
+
+        // ── GA4 click tracking ──
+        document.getElementById('bannerLink').addEventListener('click', function () {
+            try {
+                window.parent.postMessage({ xudoEvent: 'ad_banner_click' }, '*');
+            } catch (_) {}
+        });
+
+        // ── Translations (button & status labels) ──
+        const TRANS = {
+            'en-US': { live: 'Live Now', upcoming: 'Upcoming', btn: 'Watch Free →', vs: 'vs' },
+            'id-ID': { live: 'Siaran Langsung', upcoming: 'Segera', btn: 'Tonton Gratis →', vs: 'vs' },
+            'bn-BD': { live: 'এখন লাইভ', upcoming: 'শীঘ্রই', btn: 'বিনামূল্যে →', vs: 'বনাম' },
+            'vi-VN': { live: 'Đang Trực Tiếp', upcoming: 'Sắp Diễn Ra', btn: 'Xem Miễn Phí →', vs: 'vs' },
+            'km-KH': { live: 'ផ្សាយផ្ទាល់', upcoming: 'ឆាប់ៗ', btn: 'មើលឥឡូវ →', vs: 'vs' },
+            'th-TH': { live: 'ถ่ายทอดสด', upcoming: 'กำลังจะมา', btn: 'ดูฟรี →', vs: 'vs' },
+            'ms-MY': { live: 'Siaran Langsung', upcoming: 'Akan Datang', btn: 'Tonton Percuma →', vs: 'vs' },
+            'tl-PH': { live: 'Live Na', upcoming: 'Paparating', btn: 'Panoorin Libre →', vs: 'vs' },
+            'hi-IN': { live: 'अभी लाइव', upcoming: 'आने वाला', btn: 'मुफ्त देखें →', vs: 'बनाम' },
+            'zh-CN': { live: '正在直播', upcoming: '即将开始', btn: '免费观看 →', vs: 'VS' },
+            'zh-TW': { live: '正在直播', upcoming: '即將開始', btn: '免費觀看 →', vs: 'VS' },
+            'ja-JP': { live: 'ライブ中', upcoming: 'まもなく', btn: '無料で見る →', vs: 'vs' },
+            'ko-KR': { live: '라이브 중', upcoming: '곧 시작', btn: '무료 시청 →', vs: 'vs' },
+            'ar-SA': { live: 'مباشر الآن', upcoming: 'قريباً', btn: 'شاهد مجاناً ←', vs: 'ضد' },
+            'pt-BR': { live: 'Ao Vivo', upcoming: 'Em Breve', btn: 'Assistir Grátis →', vs: 'vs' },
+            'es-ES': { live: 'En Vivo', upcoming: 'Próximo', btn: 'Ver Gratis →', vs: 'vs' },
+            'fr-FR': { live: 'En Direct', upcoming: 'À Venir', btn: 'Regarder Gratuit →', vs: 'vs' },
+            'tr-TR': { live: 'Canlı', upcoming: 'Yakında', btn: 'Ücretsiz İzle →', vs: 'vs' },
+            'ru-RU': { live: 'В эфире', upcoming: 'Скоро', btn: 'Смотреть бесплатно →', vs: 'vs' },
+        };
+
+        const t = TRANS[lang] || TRANS['en-US'];
+
+        // No fake fallback — banner shows generic state when no real data available
+
+        // ── Helpers ──
+
+        function getInitials(name) {
+            if (!name) return '?';
+            return name.split(/[\s\-]+/).filter(Boolean)
+                .map(w => w[0]).join('').toUpperCase().slice(0, 3);
+        }
+
+        function titleCase(str) {
+            return (str || '').replace(/\b\w/g, c => c.toUpperCase());
+        }
+
+        function formatTime(ts) {
+            const d = new Date(ts);
+            return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function formatCountdown(ts) {
+            const diff = ts - Date.now();
+            if (diff <= 0) return null;
+            const m = Math.floor(diff / 60000);
+            const h = Math.floor(m / 60);
+            if (h >= 1) return `${h}h ${m % 60}m`;
+            return `${m}m`;
+        }
+
+        function buildWatchUrl(match) {
+            if (!match.sources || !match.sources.length) return XUDO_FOOTBALL_URL;
+            const src  = match.sources[0];
+            const home = match.teams?.home?.name || match.title.split(' vs ')[0] || '';
+            const away = match.teams?.away?.name || match.title.split(' vs ')[1] || '';
+            const p = new URLSearchParams({
+                source: src.source, sid: src.id,
+                allSources: JSON.stringify(match.sources),
+                title: match.title, home, away,
+                homeBadge: match.teams?.home?.badge || '',
+                awayBadge: match.teams?.away?.badge || '',
+                league: titleCase(match.category),
+                date: String(match.date),
+            });
+            // Point to XUDOFootball watch page
+            return `${XUDO_FOOTBALL_URL.replace('#', '').replace('XUDOFootball', '')}watch-live.html?${p.toString()}`;
+        }
+
+        function setBadge(el, logo, name) {
+            const initials = getInitials(name);
+            if (logo && logo.startsWith('http')) {
+                el.innerHTML = `<img src="${logo}" alt="${name}" width="26" height="26"
+                    onerror="this.parentElement.textContent='${initials}'">`;
+            } else {
+                el.textContent = initials;
+            }
+        }
+
+        // ── Render a match into the banner ──
+        let matchList = [];
+        let currentIndex = 0;
+        let rotateTimer = null;
+
+        function renderMatch(match, animate) {
+            const isLive  = match.isLive;
+            const home    = match.home    || (match.teams?.home?.name) || match.title?.split(' vs ')[0] || '?';
+            const away    = match.away    || (match.teams?.away?.name) || match.title?.split(' vs ')[1] || '?';
+            const league  = match.league  || titleCase(match.category) || 'Football';
+            // homeLogo/awayLogo: full URL from ESPN
+            const homeLogo  = match.homeLogo  || match.homeBadge || match.teams?.home?.badge || '';
+            const awayLogo  = match.awayLogo  || match.awayBadge || match.teams?.away?.badge || '';
+            const homeScore = match.homeScore ?? '';
+            const awayScore = match.awayScore ?? '';
+            const clock     = match.clock     || '';
+            const url       = match.watchUrl  || buildWatchUrl(match);
+
+            // Set link — always straight to XUDOFootball
+            document.getElementById('bannerLink').href = XUDO_FOOTBALL_URL;
+
+            // Status
+            const statusText = isLive ? t.live : t.upcoming;
+            document.getElementById('dsk-status').textContent = statusText;
+            document.getElementById('mob-status').textContent = statusText;
+
+            // League — only show pill if it's a real league name (not generic "Football")
+            const leagueName = league && league.toLowerCase() !== 'football' ? league : '';
+            const dskLeague = document.getElementById('dsk-league');
+            const mobLeague = document.getElementById('mob-league');
+            dskLeague.textContent    = leagueName;
+            dskLeague.style.display  = leagueName ? '' : 'none';
+            mobLeague.textContent    = leagueName;
+            mobLeague.style.display  = leagueName ? '' : 'none';
+
+            // Button
+            document.getElementById('dsk-btn').textContent = t.btn;
+            document.getElementById('mob-btn').textContent = t.btn;
+
+            // Instant content swap — no animation
+            applyMatchContent(home, away, league, homeLogo, awayLogo, isLive, match.date, url, homeScore, awayScore, clock);
+
+            // Update dots
+            const dots = document.querySelectorAll('.match-dot');
+            dots.forEach((d, i) => d.classList.toggle('active', i === currentIndex));
+        }
+
+        function applyMatchContent(home, away, league, homeLogo, awayLogo, isLive, date, url, homeScore, awayScore, clock) {
+            // Ensure vs separator is visible (may have been hidden by showNoMatches)
+            document.getElementById('dsk-vs').style.display = '';
+
+            // Desktop badges (handles full URL or badge ID)
+            setBadge(document.getElementById('dsk-home-badge'), homeLogo, home);
+            setBadge(document.getElementById('dsk-away-badge'), awayLogo, away);
+            document.getElementById('dsk-home').textContent = home;
+            document.getElementById('dsk-away').textContent = away;
+
+            // Score or "vs" separator
+            const vsEl = document.getElementById('dsk-vs');
+            const hasScore = isLive && homeScore !== '' && awayScore !== '';
+            if (hasScore) {
+                vsEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,50,50,0.2);border:1px solid rgba(255,80,80,0.4);border-radius:6px;padding:2px 9px;">
+                    <span style="font-size:1rem;font-weight:800;color:#fff;line-height:1;">${homeScore}</span>
+                    <span style="font-size:0.8rem;color:rgba(255,255,255,0.5);">-</span>
+                    <span style="font-size:1rem;font-weight:800;color:#fff;line-height:1;">${awayScore}</span>
+                </span>`;
+            } else {
+                vsEl.textContent = t.vs;
+            }
+
+            // Time / clock / score
+            const timeEl  = document.getElementById('dsk-time');
+            const mobTime = document.getElementById('mob-time');
+            if (isLive) {
+                const clockLabel = clock ? `${clock}` : 'LIVE';
+                timeEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,50,50,0.25);border:1px solid rgba(255,80,80,0.4);border-radius:5px;padding:2px 7px;font-size:0.68rem;font-weight:800;color:#fff;">
+                    <span class="live-dot" style="width:5px;height:5px;flex-shrink:0;"></span>${clockLabel}</span>`;
+                mobTime.textContent = hasScore ? `⚽ ${homeScore} - ${awayScore}${clock ? '  ' + clock : ''}` : '⚽ Match in progress';
+            } else if (date) {
+                const countdown = formatCountdown(date);
+                const time = formatTime(date);
+                timeEl.textContent = countdown ? `⏱ ${countdown}` : time;
+                mobTime.textContent = countdown ? `Starts in ${countdown}` : `Kickoff: ${time}`;
+            } else {
+                timeEl.textContent = '';
+                mobTime.textContent = '';
+            }
+
+            // Mobile match line
+            document.getElementById('mob-match').textContent = `${home}  ${t.vs}  ${away}`;
+        }
+
+        function buildDots() {
+            const container = document.getElementById('dsk-dots');
+            container.innerHTML = '';
+            if (matchList.length <= 1) return;
+            matchList.forEach((_, i) => {
+                const d = document.createElement('span');
+                d.className = 'match-dot' + (i === 0 ? ' active' : '');
+                container.appendChild(d);
+            });
+        }
+
+        function rotate() {
+            if (matchList.length <= 1) return;
+            currentIndex = (currentIndex + 1) % matchList.length;
+            renderMatch(matchList[currentIndex], true);
+        }
+
+        function startRotation() {
+            if (rotateTimer) clearInterval(rotateTimer);
+            if (matchList.length > 1) {
+                rotateTimer = setInterval(rotate, 4000);
+            }
+        }
+
+        // ── Show generic "no matches" state ──
+        function showNoMatches() {
+            document.getElementById('dsk-status').textContent = t.upcoming;
+            document.getElementById('mob-status').textContent = t.upcoming;
+            document.getElementById('dsk-league').style.display = 'none';
+            document.getElementById('mob-league').style.display = 'none';
+            document.getElementById('dsk-home').textContent = 'XUDOFootball';
+            document.getElementById('dsk-away').textContent = '';
+            document.getElementById('dsk-home-badge').textContent = '⚽';
+            document.getElementById('dsk-away-badge').textContent = '';
+            document.getElementById('dsk-vs').style.display = 'none';
+            document.getElementById('dsk-time').textContent = 'Live streams every day';
+            document.getElementById('mob-match').textContent = 'Watch live football free';
+            document.getElementById('mob-time').textContent = 'Streams updated daily';
+            document.getElementById('dsk-btn').textContent = t.btn;
+            document.getElementById('mob-btn').textContent = t.btn;
+        }
+
+        // ── ESPN leagues (priority order — World Cup first!) ──
+        const ESPN_LEAGUES = [
+            { slug: 'fifa.world',     name: 'World Cup 2026' },
+            { slug: 'uefa.champions', name: 'Champions League' },
+            { slug: 'eng.1',          name: 'Premier League' },
+            { slug: 'esp.1',          name: 'La Liga' },
+            { slug: 'ger.1',          name: 'Bundesliga' },
+            { slug: 'ita.1',          name: 'Serie A' },
+            { slug: 'fra.1',          name: 'Ligue 1' },
+        ];
+
+        function espnDateStr(offsetDays) {
+            const d = new Date();
+            d.setDate(d.getDate() + offsetDays);
+            return d.toISOString().slice(0, 10).replace(/-/g, '');
+        }
+
+        async function fetchESPN() {
+            // Fetch today + tomorrow for each league
+            const today    = espnDateStr(0);
+            const tomorrow = espnDateStr(1);
+            const fetches  = [];
+            for (const l of ESPN_LEAGUES) {
+                for (const date of [today, tomorrow]) {
+                    fetches.push(
+                        fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${date}`, { mode: 'cors' })
+                            .then(r => r.ok ? r.json() : null)
+                            .then(data => data ? { league: l.name, events: data.events || [] } : null)
+                            .catch(() => null)
+                    );
+                }
+            }
+
+            const results = await Promise.allSettled(fetches);
+            const matches = [];
+            const seen    = new Set();
+
+            for (const r of results) {
+                if (r.status !== 'fulfilled' || !r.value) continue;
+                const { league, events } = r.value;
+                for (const ev of events) {
+                    if (seen.has(ev.id)) continue;
+                    seen.add(ev.id);
+
+                    const comp = ev.competitions?.[0];
+                    if (!comp) continue;
+                    const home = comp.competitors?.find(c => c.homeAway === 'home');
+                    const away = comp.competitors?.find(c => c.homeAway === 'away');
+                    if (!home || !away) continue;
+
+                    // ESPN's type.state is the canonical lifecycle flag:
+                    //   'pre' = scheduled, 'in' = live, 'post' = finished
+                    const state  = ev.status?.type?.state || 'pre';
+                    const isLive = state === 'in';
+                    if (state === 'post') continue; // skip finished matches
+
+                    // ESPN provides a ready-made football clock label:
+                    // "HT", "63'", "90'+3'", "FT" — no manual calculation needed
+                    const clock = isLive ? (ev.status?.type?.shortDetail || '') : '';
+
+                    matches.push({
+                        home:      home.team.displayName || home.team.abbreviation,
+                        away:      away.team.displayName || away.team.abbreviation,
+                        homeLogo:  home.team.logo || '',
+                        awayLogo:  away.team.logo || '',
+                        homeScore: isLive ? (home.score || '0') : '',
+                        awayScore: isLive ? (away.score || '0') : '',
+                        league,
+                        isLive,
+                        date:   new Date(ev.date).getTime(),
+                        clock,
+                        watchUrl: XUDO_FOOTBALL_URL,
+                        source: 'espn',
+                    });
+                }
+            }
+
+            // Live first, then upcoming sorted by kick-off time
+            matches.sort((a, b) => {
+                if (a.isLive !== b.isLive) return a.isLive ? -1 : 1;
+                return a.date - b.date;
+            });
+
+            return matches.slice(0, 8);
+        }
+
+        // ── Fetch matches from ESPN ──
+        let refreshTimer = null;
+
+        async function fetchAndRender() {
+            try {
+                const espnMatches = await fetchESPN();
+                if (espnMatches.length > 0) {
+                    matchList    = espnMatches;
+                    currentIndex = 0;
+                    buildDots();
+                    renderMatch(matchList[0], false);
+                    startRotation();
+
+                    // Auto-refresh every 60s while any match is live
+                    if (refreshTimer) clearTimeout(refreshTimer);
+                    if (matchList.some(m => m.isLive)) {
+                        refreshTimer = setTimeout(fetchAndRender, 60000);
+                    }
+                } else {
+                    showNoMatches();
+                }
+            } catch (err) {
+                console.warn('[XUDOFootball banner] ESPN unavailable:', err.message);
+                showNoMatches();
+            }
+        }
+
+        // ── Boot ──
+        fetchAndRender();
+
+        // ── Auto-resize iframe in parent ──
+        function notifyHeight() {
+            try {
+                window.parent.postMessage({ adBannerHeight: document.body.scrollHeight }, '*');
+            } catch (_) {}
+        }
+        window.addEventListener('load', notifyHeight);
+        new ResizeObserver(notifyHeight).observe(document.body);
+        setTimeout(notifyHeight, 300);
+
+    })();
+    </script>
+</body>
+</html>

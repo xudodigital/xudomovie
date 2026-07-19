@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /*?search=
+Disallow: /*&search=
+Disallow: /*?lang=
+Disallow: /*&lang=
+Sitemap: https://xudomovie.us/sitemap.xml

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://xudomovie.us/</loc>
+    <lastmod>2026-05-21</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://xudomovie.us/"/>
+    <xhtml:link rel="alternate" hreflang="en"         href="https://xudomovie.us/"/>
+    <xhtml:link rel="alternate" hreflang="id"         href="https://xudomovie.us/"/>
+    <xhtml:link rel="alternate" hreflang="ms"         href="https://xudomovie.us/"/>
+    <xhtml:link rel="alternate" hreflang="fil"        href="https://xudomovie.us/"/>
+    <xhtml:link rel="alternate" hreflang="vi"         href="https://xudomovie.us/"/>
+    <xhtml:link rel="alternate" hreflang="th"         href="https://xudomovie.us/"/>
+    <xhtml:link rel="alternate" hreflang="km"         href="https://xudomovie.us/"/>
+    <xhtml:link rel="alternate" hreflang="bn"         href="https://xudomovie.us/"/>
+    <xhtml:link rel="alternate" hreflang="hi"         href="https://xudomovie.us/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans"    href="https://xudomovie.us/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hant"    href="https://xudomovie.us/"/>
+    <xhtml:link rel="alternate" hreflang="ja"         href="https://xudomovie.us/"/>
+    <xhtml:link rel="alternate" hreflang="ko"         href="https://xudomovie.us/"/>
+    <xhtml:link rel="alternate" hreflang="ar"         href="https://xudomovie.us/"/>
+    <xhtml:link rel="alternate" hreflang="ru"         href="https://xudomovie.us/"/>
+    <xhtml:link rel="alternate" hreflang="tr"         href="https://xudomovie.us/"/>
+    <xhtml:link rel="alternate" hreflang="fr"         href="https://xudomovie.us/"/>
+    <xhtml:link rel="alternate" hreflang="es"         href="https://xudomovie.us/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR"      href="https://xudomovie.us/"/>
+  </url>
+  <url>
+    <loc>https://xudomovie.us/about.html</loc>
+    <lastmod>2026-05-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://xudomovie.us/contact.html</loc>
+    <lastmod>2026-05-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://xudomovie.us/privacy-policy.html</loc>
+    <lastmod>2026-05-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://xudomovie.us/dmca.html</loc>
+    <lastmod>2026-05-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>

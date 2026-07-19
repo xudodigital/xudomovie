@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-FZLP60XCL2"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag() { dataLayer.push(arguments); }
+            gtag('js', new Date());
+            gtag('config', 'G-FZLP60XCL2');
+        </script>
+        <script src="https://analytics.ahrefs.com/analytics.js" data-key="K4OUYU+8E/+v+V8sR0WUCw" async></script>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="theme-color" content="#0f0f0f">
+        <title>Details - XUDOMovie</title>
+        <meta name="description" content="Detailed movie reviews, cast information, and trailers on XUDOMovie.">
+        <meta name="robots" content="noindex, nofollow">
+        <link rel="canonical" href="https://xudomovie.us/">
+        <link href="https://fonts.googleapis.com/css2?family=Saira:wght@300;400;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="css/style.css?v=21">
+        <link rel="icon" href="icon.svg" type="image/svg+xml">
+    </head>
+    <body>
+        <div id="global-header-placeholder"></div>
+        <div class="player-wrapper" id="player-container"></div>
+        <div class="ad-banner-container ad-mb-5">
+            <div class="ad-banner ad-transparent">
+                <iframe src="ad-banner.html" scrolling="no" class="ad-iframe"></iframe>
+            </div>
+        </div>
+        <div class="watch-container">
+            <div class="control-bar" id="control-bar">
+                <div class="server-control">
+                    <span class="server-label">Server:</span>
+                    <button class="server-btn active" onclick="changeServer(1)">1</button>
+                    <button class="server-btn" onclick="changeServer(2)">2</button>
+                </div>
+            </div>
+            <div id="ublock-note" style="display:flex;align-items:center;gap:10px;margin:10px 0 24px;padding:10px 14px;background:rgba(229,9,20,0.07);border:1px solid rgba(229,9,20,0.25);border-left:3px solid #e50914;border-radius:8px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="#e50914" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span id="ublock-note-text" style="font-size:0.78rem;color:#ccc;line-height:1.4;"></span>
+            </div>
+            <div class="tv-controls" id="tv-controls" style="display:none;">
+                <div class="tv-controls-header">
+                    <h3 id="select-episode-title"></h3>
+                    <div class="season-dropdown" id="season-dropdown">
+                        <button class="season-dropdown-btn" id="season-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+                            <span id="season-dropdown-label">Season 1</span>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <ul class="season-dropdown-list" id="season-dropdown-list" role="listbox"></ul>
+                    </div>
+                </div>
+                <div class="episodes-grid" id="episodes-grid"></div>
+            </div>
+            <div class="movie-info">
+                <div class="poster-container">
+                    <img id="detail-poster" src="https://via.placeholder.com/500x750?text=Loading" alt="Movie Poster">
+                </div>
+                <div class="details-container">
+                    <h1 id="detail-title">Loading...</h1>
+                    <div class="metadata">
+                        <span id="detail-rating" class="rating">--</span>
+                        <span id="detail-year" class="year">----</span>
+                        <span id="detail-cert" class="quality" style="display:none;">--</span>
+                        <span id="detail-runtime" class="quality">-- min</span>
+                        <span class="quality">HD</span>
+                    </div>
+                    <div class="genres" id="detail-genres" style="margin-bottom: 20px;"></div>
+                    <p class="overview" id="detail-overview">Fetching description...</p>
+                    <div id="action-group" style="margin-top: 25px; display: flex; gap: 15px; flex-wrap: wrap;">
+                        <button class="share-btn" onclick="window.shareMovie()">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                <circle cx="18" cy="5" r="3"></circle>
+                                <circle cx="6" cy="12" r="3"></circle>
+                                <circle cx="18" cy="19" r="3"></circle>
+                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                            </svg> <span id="btn-share-text">Share</span>
+                        </button>
+                    </div>
+                    <div class="cast-section" style="margin-top: 30px;">
+                        <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 15px;" id="cast-title"></h3>
+                        <div id="cast-list" class="cast-list"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="recommendations-section" style="margin-top: 40px;">
+                <h2 class="section-title" id="rec-title"></h2>
+                <div class="horizontal-slider" id="rec-slider"></div>
+            </div>
+        </div>
+        <button class="theme-toggle-btn" id="theme-toggle" aria-label="Toggle Dark/Light Mode" title="Toggle Theme">
+            <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="display:none;">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+        </button>
+        <div id="global-footer-placeholder"></div>
+        <script src="js/i18n/translations.js"></script>
+        <script src="js/global-header.js"></script>
+        <script src="js/global-footer.js"></script>
+        <script src="js/main.js?v=10"></script>
+        <script src="js/visitor-counter.js" defer></script>
+        <div id="trailer-modal" class="trailer-modal">
+            <div class="trailer-modal-content">
+                <span class="trailer-close" onclick="window.closeTrailer()">&times;</span>
+                <div id="trailer-video-container" style="width:100%; height:100%;"></div>
+            </div>
+        </div>
+    </body>
+</html>

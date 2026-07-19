@@ -1,0 +1,29 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+.vscode/*
+!.vscode/settings.json
+.idea/
+
+# Claude Code local-only settings (machine-specific permissions/paths)
+.claude/settings.local.json
+
+# Node / tooling (wrangler devDependency only — not a Node app)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Cloudflare Pages / Wrangler
+.wrangler/
+.dev.vars
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
