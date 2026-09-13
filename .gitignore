@@ -27,3 +27,6 @@ yarn-error.log*
 
 # Logs
 *.log
+
+# Build output (staged deploy directory)
+dist/
