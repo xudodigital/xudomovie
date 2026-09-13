@@ -109,12 +109,6 @@ function initScrollDepthTracking() {
 
 const GENRE_HARDCODED = window.XUDO_I18N.GENRE_HARDCODED; // moved to js/i18n/translations.js (single source of truth)
 
-const TRUSTED_PLAYER_ORIGINS = new Set([
-    'https://vidlink.pro',
-    'https://vsembed.ru',
-    'https://vsembed.su',
-]);
-
 const DEPT_LABELS = {
     'Acting'          : 'Actor',
     'Directing'       : 'Director',
@@ -138,10 +132,12 @@ let currentPage = 1,
     isLoading = false,
     currentSeason = 1,
     currentEpisode = 1,
-    currentServer = 1;
+    currentServer = 1,
+    currentAnimeDubType = 'sub';
 let currentBrowseEndpoint = '',
     currentMediaType = 'movie',
     currentGenreId = null,
+    _categoryBaseEndpoint = null,   // current toggle-state base for country-browse pages
     searchDebounceTimer;
 let LOCAL_SEARCH_INDEX = [];
 let searchCurrentPage = 1,
@@ -199,24 +195,10 @@ function isWatchLater(id) {
     return (JSON.parse(localStorage.getItem('xudo_watch_later')) || []).some(f => f.id == id);
 }
 
-function getWatchProgress(id) {
-    const history = JSON.parse(localStorage.getItem('xudo_history')) || [];
-    return history.find(x => x.id == id)?.progress || 0;
-}
-
-function saveWatchProgress(id, percent) {
-    let history = JSON.parse(localStorage.getItem('xudo_history')) || [];
-    const idx   = history.findIndex(x => x.id == id);
-    if (idx === -1) return;
-    history[idx].progress = Math.min(100, Math.max(0, Math.round(percent)));
-    localStorage.setItem('xudo_history', JSON.stringify(history));
-}
-
 function updateContinueWatching(item) {
     setTimeout(() => {
         let history = JSON.parse(localStorage.getItem('xudo_history')) || [];
         const existing = history.find(x => x.id == item.id);
-        const existingProgress = existing?.progress || 0;
         history = history.filter(x => x.id !== item.id);
 
         const s = typeof currentSeason  !== 'undefined' ? currentSeason  : 1;
@@ -233,81 +215,10 @@ function updateContinueWatching(item) {
             rating  : item.vote_average,
             season  : s,
             episode : e,
-            progress: existingProgress
         });
         if (history.length > 20) history.pop();
         localStorage.setItem('xudo_history', JSON.stringify(history));
     }, 5000);
-}
-
-function initProgressListener(contentId, runtimeMinutes = 0) {
-    let progressSavedViaMessage = false;
-
-    const watchStartTime = window._playerReadyTime || Date.now();
-
-    let hiddenDuration = 0;
-    let hiddenAt       = null;
-
-    function onVisibilityChange() {
-        if (document.hidden) {
-            hiddenAt = Date.now();
-        } else if (hiddenAt !== null) {
-            hiddenDuration += Date.now() - hiddenAt;
-            hiddenAt = null;
-        }
-    }
-    document.addEventListener('visibilitychange', onVisibilityChange);
-
-    function activeElapsedMinutes() {
-        const inProgressHiddenMs = hiddenAt !== null ? Date.now() - hiddenAt : 0;
-        return (Date.now() - watchStartTime - hiddenDuration - inProgressHiddenMs) / 60000;
-    }
-
-    function onPlayerMessage(event) {
-        if (!TRUSTED_PLAYER_ORIGINS.has(event.origin)) return;
-        try {
-            const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-            if (data?.type !== 'timeupdate' || !(data.current > 0) || !(data.duration > 0)) return;
-
-            const percent = (data.current / data.duration) * 100;
-
-            if (percent >= 98) {
-                saveWatchProgress(contentId, 0);
-                trackEvent('video_complete', { content_id: contentId });
-            } else if (percent > 2) {
-                saveWatchProgress(contentId, percent);
-            }
-            if (!progressSavedViaMessage) {
-                trackEvent('video_start', { content_id: contentId });
-            }
-            progressSavedViaMessage = true;
-        } catch (_) {}
-    }
-    window.addEventListener('message', onPlayerMessage);
-
-    const startedTimer = setTimeout(() => {
-        if (!progressSavedViaMessage) saveWatchProgress(contentId, 5);
-    }, 6000);
-
-    let timeUpdateInterval = null;
-    if (runtimeMinutes > 0) {
-        timeUpdateInterval = setInterval(() => {
-            if (progressSavedViaMessage) { clearInterval(timeUpdateInterval); return; }
-            const percent = Math.min(95, (activeElapsedMinutes() / runtimeMinutes) * 100);
-            if (percent > 5) saveWatchProgress(contentId, percent);
-        }, 60000);
-    }
-
-    window.addEventListener('beforeunload', () => {
-        if (!progressSavedViaMessage && runtimeMinutes > 0) {
-            const percent = Math.min(95, (activeElapsedMinutes() / runtimeMinutes) * 100);
-            if (percent > 2) saveWatchProgress(contentId, percent);
-        }
-        document.removeEventListener('visibilitychange', onVisibilityChange);
-        window.removeEventListener('message', onPlayerMessage);
-        clearTimeout(startedTimer);
-        if (timeUpdateInterval) clearInterval(timeUpdateInterval);
-    }, { once: true });
 }
 
 function getTargetUrl(item) {
@@ -554,7 +465,7 @@ async function fetchLiveSearch(query) {
                     <img src="${poster}" alt="${title}">
                     <div class="search-item-info">
                         <span class="search-item-title">${title}</span>
-                        <span class="search-item-meta">${year} · ${i.media_type.toUpperCase()}</span>
+                        <span class="search-item-meta">${year} · ${i.media_type === 'movie' ? TEXTS.typeMovie : TEXTS.typeTv}</span>
                     </div>
                 </a>
                 <button class="search-fav-btn ${isFavorite(i.id) ? 'active' : ''}"
@@ -748,11 +659,6 @@ function createCardHTML(item, typeOverride) {
     const rating      = item.vote_average ? item.vote_average.toFixed(1) : 'NR';
     const isFav       = isFavorite(item.id);
     const isWL        = isWatchLater(item.id);
-    const progress    = getWatchProgress(item.id);
-    const progressBar = progress > 0
-        ? `<div class="card-progress-bar"><div class="card-progress-fill" style="width:${progress}%"></div></div>`
-        : '';
-
     const targetLink    = getTargetUrl({ id: item.id, media_type: t, season: item.season, episode: item.episode });
     const mediaTypeLabel = t === 'movie' ? 'Movie' : 'TV Show';
 
@@ -788,10 +694,9 @@ function createCardHTML(item, typeOverride) {
             <img src="${poster}" alt="${title} (${year}) Full ${mediaTypeLabel} Review & Details"
                  loading="lazy" onerror="this.onerror=null;this.src='${fallbackImage}';">
             <span class="card-rating">★ ${rating}</span>
-            ${progressBar}
             <div class="card-info">
                 <div class="card-title">${title}</div>
-                <div class="card-year">${year} • ${t.toUpperCase()}</div>
+                <div class="card-year">${year} • ${t === 'movie' ? TEXTS.typeMovie : TEXTS.typeTv}</div>
                 ${continueBadge}
             </div>
         </div>`;
@@ -910,16 +815,57 @@ async function loadHeroSlider() {
         const dots      = document.getElementById('hero-dots');
         if (!container || !slides.length) return;
 
-        container.innerHTML = [slides[slides.length - 1], ...slides, slides[0]].map(i => {
+        // Fetch detail per slide in parallel: tagline, genres, status, number_of_seasons/runtime
+        const detailResults = await Promise.allSettled(
+            slides.map(i =>
+                fetch(`${BASE_URL}/${i.media_type}/${i.id}?language=${CURRENT_LANG}&append_to_response=images`)
+                    .then(r => r.ok ? r.json() : {})
+                    .catch(() => ({}))
+            )
+        );
+        const enriched = slides.map((item, idx) => ({
+            ...item,
+            _d: detailResults[idx].status === 'fulfilled' ? detailResults[idx].value : {}
+        }));
+
+        const buildSlide = i => {
+            const d        = i._d;
             const link     = getTargetUrl(i);
             const title    = sanitizeHTML(i.title || i.name);
             const overview = sanitizeHTML(i.overview);
             const btnLabel = i.media_type === 'tv' ? TEXTS.heroBtnTv : TEXTS.heroBtn;
-            return `<a href="${link}" class="hero-slide" data-id="${i.id}" data-type="${i.media_type}" style="background-image:linear-gradient(to top,#0f0f0f,transparent 90%),url('${IMG_HD + i.backdrop_path}')">
+            const mediaTag = i.media_type === 'tv' ? TEXTS.typeTv : TEXTS.typeMovie;
+            const tagline  = d.tagline ? sanitizeHTML(d.tagline) : '';
+            const year     = (i.release_date || i.first_air_date || '').slice(0, 4);
+            const rating   = i.vote_average ? i.vote_average.toFixed(1) : '';
+            const genres   = (d.genres || []).slice(0, 3).map(g => sanitizeHTML(g.name)).join(', ');
+            const extra    = i.media_type === 'tv'
+                ? (d.number_of_seasons ? `${d.number_of_seasons} Season${d.number_of_seasons !== 1 ? 's' : ''}` : '')
+                : (d.runtime           ? `${d.runtime} min`                                                       : '');
+            const status   = i.media_type === 'tv' && d.status ? sanitizeHTML(d.status.toUpperCase()) : '';
+            const metaParts = [year, extra, genres].filter(Boolean).join(' • ');
+            const logos    = d.images?.logos || [];
+            const langCode = (CURRENT_LANG || 'en').split('-')[0];
+            const logo     = logos.find(l => l.iso_639_1 === langCode)
+                          || logos.find(l => l.iso_639_1 === 'en')
+                          || logos[0]
+                          || null;
+            const logoUrl  = logo ? `https://image.tmdb.org/t/p/w500${logo.file_path}` : null;
+            const titleHTML = logoUrl
+                ? `<img class="hero-logo" src="${logoUrl}" alt="${title}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">`
+                  + `<h1 class="hero-title" style="display:none">${title}</h1>`
+                : `<h1 class="hero-title">${title}</h1>`;
+            return `<a href="${link}" class="hero-slide" data-id="${i.id}" data-type="${i.media_type}" style="background-image:url('${IMG_HD + i.backdrop_path}')">
                 <div class="hero-video-preview"></div>
                 <div class="hero-content">
-                    <div class="hero-tag">${TEXTS.trending}</div>
-                    <h1 class="hero-title">${title}</h1>
+                    <div class="hero-tag">${mediaTag}</div>
+                    ${tagline ? `<p class="hero-tagline">${tagline}</p>` : ''}
+                    ${titleHTML}
+                    <div class="hero-meta">
+                        ${rating   ? `<span class="hero-rating"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#f5c518" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> ${rating}</span>` : ''}
+                        ${metaParts ? `<span class="hero-attrs">${metaParts}</span>` : ''}
+                        ${status    ? `<span class="hero-status-badge">${status}</span>` : ''}
+                    </div>
                     <p class="hero-desc">${overview}</p>
                     <div class="hero-btn">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
@@ -927,7 +873,9 @@ async function loadHeroSlider() {
                     </div>
                 </div>
             </a>`;
-        }).join('');
+        };
+
+        container.innerHTML = [enriched[enriched.length - 1], ...enriched, enriched[0]].map(buildSlide).join('');
 
         if (dots) {
             dots.innerHTML = slides.map((_, i) => `<div class="dot ${i === 0 ? 'active' : ''}" data-index="${i}"></div>`).join('');
@@ -1116,21 +1064,57 @@ function loadContinueWatching() {
     attachCardDelegation('#continue-watching-section .horizontal-slider');
 }
 
+async function fetchMixedCountrySection(s, today) {
+    const [movieSettled, tvSettled] = await Promise.allSettled([
+        fetch(`${BASE_URL}/discover/movie?${s.mixedCountry}&sort_by=primary_release_date.desc&primary_release_date.lte=${today}&language=${CURRENT_LANG}`),
+        fetch(`${BASE_URL}/discover/tv?${s.mixedCountry}&sort_by=first_air_date.desc&first_air_date.lte=${today}&language=${CURRENT_LANG}`),
+    ]);
+
+    let items = [];
+
+    if (movieSettled.status === 'fulfilled' && movieSettled.value.ok) {
+        const d = await movieSettled.value.json();
+        (d.results || []).forEach(r => {
+            if (r.poster_path && r.release_date && r.release_date <= today)
+                items.push({ ...r, media_type: 'movie', _sortDate: r.release_date });
+        });
+    }
+    if (tvSettled.status === 'fulfilled' && tvSettled.value.ok) {
+        const d = await tvSettled.value.json();
+        (d.results || []).forEach(r => {
+            if (r.poster_path && r.first_air_date && r.first_air_date <= today)
+                items.push({ ...r, media_type: 'tv', _sortDate: r.first_air_date });
+        });
+    }
+
+    items.sort((a, b) => b._sortDate.localeCompare(a._sortDate));
+    items = items.slice(0, 30);
+
+    if (!items.length) throw new Error(`Mixed section ${s.t} empty after filter`);
+    return { ...s, results: items };
+}
+
 async function loadAllSections() {
     const main = document.getElementById('main-content');
+    const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD", computed at call time
     const sections = [
-        { t: TEXTS.movPopular,    u: '/movie/popular',       k: 'movie' },
-        { t: TEXTS.movNowPlaying, u: '/movie/now_playing',   k: 'movie' },
-        { t: TEXTS.movUpcoming,   u: '/movie/upcoming',      k: 'movie' },
-        { t: TEXTS.movTopRated,   u: '/movie/top_rated',     k: 'movie' },
-        { t: TEXTS.tvPopular,     u: '/tv/popular',          k: 'tv'    },
-        { t: TEXTS.tvAiringToday, u: '/tv/airing_today',     k: 'tv'    },
-        { t: TEXTS.tvOnAir,       u: '/tv/on_the_air',       k: 'tv'    },
-        { t: TEXTS.tvTopRated,    u: '/tv/top_rated',        k: 'tv'    }
+        { t: TEXTS.movPopular,       tk: 'movPopular',       u: `/discover/movie?sort_by=primary_release_date.desc&primary_release_date.lte=${today}&vote_count.gte=50&with_release_type=3%7C2`, k: 'movie', secId: 'sec-latest',    postFilter: r => !!r.poster_path },
+        { t: TEXTS.latestTvSection,  tk: 'latestTvSection',  u: `/discover/tv?sort_by=first_air_date.desc&first_air_date.lte=${today}&vote_count.gte=50`,                                       k: 'tv',    secId: 'sec-latest-tv', postFilter: r => !!r.poster_path },
+        { t: TEXTS.animeSection,     tk: 'animeSection',     u: '/discover/tv?with_genres=16&with_origin_country=JP&sort_by=popularity.desc',                                                   k: 'tv',    secId: 'sec-anime',  mixedCountry: 'with_genres=16&with_origin_country=JP' },
+        { t: TEXTS.appleSection,     tk: 'appleSection',     u: `/discover/tv?with_networks=2552&sort_by=first_air_date.desc&first_air_date.lte=${today}`,                                      k: 'tv',    secId: 'sec-apple'    },
+        { t: TEXTS.disneySection,    tk: 'disneySection',    u: `/discover/tv?with_networks=2739&sort_by=first_air_date.desc&first_air_date.lte=${today}`,                                      k: 'tv',    secId: 'sec-disney'   },
+        { t: TEXTS.hboSection,       tk: 'hboSection',       u: `/discover/tv?with_networks=49&sort_by=first_air_date.desc&first_air_date.lte=${today}`,                                        k: 'tv',    secId: 'sec-hbo'      },
+        { t: TEXTS.netflixSection,   tk: 'netflixSection',   u: `/discover/tv?with_networks=213&sort_by=first_air_date.desc&first_air_date.lte=${today}`,                                       k: 'tv',    secId: 'sec-netflix'  },
+        { t: TEXTS.primeSection,     tk: 'primeSection',     u: `/discover/tv?with_networks=1024&sort_by=first_air_date.desc&first_air_date.lte=${today}`,                                      k: 'tv',    secId: 'sec-prime'    },
+        { t: TEXTS.chinese,          tk: 'chinese',          u: '/discover/tv?with_origin_country=CN&sort_by=popularity.desc',                                                                  k: 'tv',    secId: 'sec-chinese',   mixedCountry: 'with_origin_country=CN' },
+        { t: TEXTS.indianSection,    tk: 'indianSection',    u: '/discover/tv?with_origin_country=IN&sort_by=popularity.desc',                                                                 k: 'tv',    secId: 'sec-indian',    mixedCountry: 'with_origin_country=IN' },
+        { t: TEXTS.korean,           tk: 'korean',           u: '/discover/tv?with_origin_country=KR&sort_by=popularity.desc',                                                                 k: 'tv',    secId: 'sec-korean',    mixedCountry: 'with_origin_country=KR' },
     ];
 
     const promises = sections.map(async (s) => {
-        const res = await fetch(`${BASE_URL}${s.u}?language=${CURRENT_LANG}`);
+        if (s.mixedCountry) return fetchMixedCountrySection(s, today);
+        const sep = s.u.includes('?') ? '&' : '?';
+        const res = await fetch(`${BASE_URL}${s.u}${sep}language=${CURRENT_LANG}`);
         if (!res.ok) throw new Error(`Section ${s.t} failed`);
         const d = await res.json();
         return { ...s, results: d.results };
@@ -1139,39 +1123,33 @@ async function loadAllSections() {
     const settled = await Promise.allSettled(promises);
     settled.forEach((result, i) => {
         if (result.status === 'rejected') { console.error(`Section error: ${sections[i].t}`, result.reason); return; }
-        const { t, u, k, results } = result.value;
-        if (!results.length) return;
-        const link    = `browse.html?endpoint=${encodeURIComponent(u)}&title=${encodeURIComponent(t)}&type=${k}&lang=${CURRENT_LANG}`;
+        const { t, tk, u, k, results, postFilter, secId } = result.value;
+        const items = postFilter ? results.filter(postFilter) : results;
+        if (!items.length) return;
+        const link    = `browse.html?endpoint=${encodeURIComponent(u)}&titleKey=${encodeURIComponent(tk || '')}&title=${encodeURIComponent(t)}&type=${k}&lang=${CURRENT_LANG}`;
         const section = document.createElement('section');
         section.className = 'content-section';
+        if (secId) section.id = secId;
         section.innerHTML = `
             <div class="section-header">
                 <h2 class="section-heading"><a href="${link}">${t}</a></h2>
                 <a href="${link}" class="section-more-link">${TEXTS.viewMore} ›</a>
             </div>
             <div class="horizontal-slider">
-                ${results.map(item => createCardHTML(item, k)).join('')}
+                ${items.map(item => createCardHTML(item, k)).join('')}
             </div>`;
         main.appendChild(section);
         attachCardDelegation(section.querySelector('.horizontal-slider'));
-
-        if (i < sections.length - 1) {
-            const adDiv = document.createElement('div');
-            adDiv.className = 'ad-banner-container';
-            adDiv.innerHTML = `<div class="ad-banner" style="background:transparent;border:none;">
-                <iframe src="ad-banner.html?v=4" width="100%" height="120" frameborder="0" scrolling="no" style="max-width:728px;border:none;overflow:hidden;"></iframe>
-            </div>`;
-            main.appendChild(adDiv);
-        }
     });
 }
 
 async function initBrowse() {
     initScrollDepthTracking();
     const params = new URLSearchParams(window.location.search);
-    const ep     = params.get('endpoint');
-    const title  = params.get('title');
-    const type   = params.get('type');
+    const ep       = params.get('endpoint');
+    const titleKey = params.get('titleKey');
+    const title    = (titleKey && TEXTS[titleKey]) || sanitizeHTML(params.get('title') || '');
+    const type     = params.get('type');
     trackPageView(`${title || 'Browse'} | XUDOMovie`, window.location.pathname + window.location.search);
 
     if (type === 'favorites') {
@@ -1200,20 +1178,116 @@ async function initBrowse() {
 
     if (!ep) return (window.location.href = 'index.html');
 
-    document.getElementById('page-title').innerText = sanitizeHTML(title);
+    document.getElementById('page-title').innerText = title;
     const lmBtn = document.getElementById('load-more-btn');
     lmBtn.textContent = TEXTS.loadMore;
     lmBtn.onclick = () => {
         trackEvent('load_more', { endpoint: ep, page: currentPage + 1, media_type: type });
         loadBrowseContent();
     };
-    currentMediaType      = type;
-    currentBrowseEndpoint = ep;
-    renderSkeletons('browse-grid', 15);
-    attachCardDelegation('#browse-grid');
-    await fetchGenres(type);
-    await loadBrowseContent();
+    // Toggle-able: has with_origin_country (country & anime) but not with_networks (platform)
+    const _epSp = new URLSearchParams(ep.includes('?') ? ep.split('?')[1] : '');
+    const _isCountryBrowse = _epSp.has('with_origin_country') &&
+                             !_epSp.has('with_networks');
+
+    if (_isCountryBrowse) {
+        // Default to Movie — swap /discover/tv → /discover/movie, keep all query params
+        const movieEp     = ep.replace('/discover/tv', '/discover/movie');
+        const normMovieEp = _normBrowseEp(movieEp, 'movie');
+        _categoryBaseEndpoint = normMovieEp;
+        currentBrowseEndpoint = normMovieEp;
+        currentMediaType      = 'movie';
+        _renderMediaTypeToggle('movie');
+        window.addEventListener('resize', _updateToggleIndicator);
+        renderSkeletons('browse-grid', 15);
+        attachCardDelegation('#browse-grid');
+        await fetchGenres('movie');
+        await loadBrowseContent();
+    } else {
+        const normEp          = _normBrowseEp(ep, type);
+        currentMediaType      = type;
+        currentBrowseEndpoint = normEp;
+        _categoryBaseEndpoint = normEp;   // set (not null) so filterByGenre uses normalized base
+        renderSkeletons('browse-grid', 15);
+        attachCardDelegation('#browse-grid');
+        await fetchGenres(type);
+        await loadBrowseContent();
+    }
 }
+
+// Normalise a browse endpoint: swap popularity sort → date-based sort + date.lte guard.
+// Leaves endpoints that already have a non-popularity sort (e.g. platform sections) untouched.
+function _normBrowseEp(ep, mediaType) {
+    const today = new Date().toISOString().slice(0, 10);
+    const qIdx  = ep.indexOf('?');
+    const path  = qIdx >= 0 ? ep.slice(0, qIdx) : ep;
+    const sp    = new URLSearchParams(qIdx >= 0 ? ep.slice(qIdx + 1) : '');
+    if (sp.get('sort_by') === 'popularity.desc') {
+        if (mediaType === 'movie') {
+            sp.set('sort_by', 'primary_release_date.desc');
+            sp.set('primary_release_date.lte', today);
+        } else {
+            sp.set('sort_by', 'first_air_date.desc');
+            sp.set('first_air_date.lte', today);
+        }
+    }
+    if (!sp.has('vote_count.gte')) sp.set('vote_count.gte', '20');
+    return `${path}?${sp.toString()}`;
+}
+
+function _updateToggleIndicator() {
+    const tog = document.getElementById('media-type-toggle');
+    if (!tog) return;
+    const active = tog.querySelector('.server-btn.active');
+    if (!active) return;
+    tog.style.setProperty('--ind-left',  active.offsetLeft  + 'px');
+    tog.style.setProperty('--ind-width', active.offsetWidth + 'px');
+}
+
+function _renderMediaTypeToggle(activeType) {
+    const existing = document.getElementById('media-type-toggle');
+    if (existing) existing.remove();
+    const div = document.createElement('div');
+    div.id        = 'media-type-toggle';
+    div.className = 'server-control';
+    div.dataset.active = activeType;
+    div.innerHTML =
+        `<button class="server-btn${activeType === 'movie' ? ' active' : ''}" id="mtoggle-movie" onclick="window.switchMediaType('movie')">${TEXTS.tabMovies}</button>` +
+        `<button class="server-btn${activeType === 'tv'    ? ' active' : ''}" id="mtoggle-tv"    onclick="window.switchMediaType('tv')">${TEXTS.tabTV}</button>`;
+    const genreList = document.getElementById('genre-list');
+    if (genreList) genreList.parentNode.insertBefore(div, genreList);
+    requestAnimationFrame(_updateToggleIndicator);
+}
+
+window.switchMediaType = async function (newType) {
+    if (newType === currentMediaType) return;
+
+    // Rebuild base from original URL endpoint — always has the country/language params
+    const urlEp     = new URLSearchParams(window.location.search).get('endpoint');
+    const qIdx      = urlEp.indexOf('?');
+    const origQuery = qIdx >= 0 ? urlEp.slice(qIdx + 1) : '';
+    const rawBase   = `/discover/${newType}?${origQuery}`;
+    const newBase   = _normBrowseEp(rawBase, newType);   // normalize sort field for new type
+
+    _categoryBaseEndpoint = newBase;
+    currentBrowseEndpoint = newBase;
+    currentMediaType      = newType;
+    currentGenreId        = null;
+    currentPage           = 1;
+
+    document.getElementById('mtoggle-movie')?.classList.toggle('active', newType === 'movie');
+    document.getElementById('mtoggle-tv')?.classList.toggle('active', newType === 'tv');
+    const tog = document.getElementById('media-type-toggle');
+    if (tog) tog.dataset.active = newType;
+    _updateToggleIndicator();
+
+    // Re-fetch genre list: movie/tv genres differ, must match new type
+    await fetchGenres(newType);
+
+    document.getElementById('browse-grid').innerHTML = '';
+    renderSkeletons('browse-grid', 15);
+    await loadBrowseContent();
+};
 
 async function loadBrowseContent() {
     if (isLoading) return;
@@ -1229,7 +1303,7 @@ async function loadBrowseContent() {
 
         if (currentPage === 1) document.getElementById('browse-grid').innerHTML = '';
         document.getElementById('browse-grid').insertAdjacentHTML('beforeend',
-            d.results.map(i => createCardHTML(i, currentMediaType)).join('')
+            d.results.filter(i => i.poster_path).map(i => createCardHTML(i, currentMediaType)).join('')
         );
 
         currentPage++;
@@ -1296,9 +1370,22 @@ window.filterByGenre = function (id, btn) {
         currentPage = 1;
         document.getElementById('browse-grid').innerHTML = '';
         renderSkeletons('browse-grid', 10);
-        currentBrowseEndpoint = id
-            ? `/discover/${currentMediaType}?with_genres=${id}&sort_by=popularity.desc`
-            : new URLSearchParams(window.location.search).get('endpoint');
+        // Use toggle-aware base when available; fall back to URL param for non-toggle pages
+        const baseEndpoint = _categoryBaseEndpoint || new URLSearchParams(window.location.search).get('endpoint');
+        if (!id) {
+            // "All Genres" — restore current toggle-state base exactly
+            currentBrowseEndpoint = baseEndpoint;
+        } else {
+            // Preserve all original category constraints; only merge with_genres
+            const qMark = baseEndpoint.indexOf('?');
+            const basePath  = qMark >= 0 ? baseEndpoint.slice(0, qMark) : baseEndpoint;
+            const baseQuery = qMark >= 0 ? baseEndpoint.slice(qMark + 1) : '';
+            const sp = new URLSearchParams(baseQuery);
+            const existing = sp.get('with_genres');
+            // AND-combine genres (comma = TMDB AND): e.g. Anime already has 16 → becomes 16,35
+            sp.set('with_genres', existing ? `${existing},${id}` : String(id));
+            currentBrowseEndpoint = `${basePath}?${sp.toString()}`;
+        }
         loadBrowseContent();
     }
 };
@@ -1392,7 +1479,15 @@ async function initWatchPage() {
     currentEpisode = parseInt(p.get('e')) || 1;
     if (!id || !type) return (window.location.href = 'index.html');
 
-    updatePlayer(type, id);
+    // Movies load the player immediately. TV defers one step: the anime route
+    // (resolved inside fetchMovieDetails) changes the embed URL, so loading now
+    // would double-load the iframe for anime titles.
+    if (type !== 'tv') {
+        updatePlayer(type, id);
+    } else {
+        const el = document.getElementById('player-container');
+        if (el) el.innerHTML = '<div style="display:grid;place-items:center;height:100%;background:#000;color:#fff"><div class="loader">Loading Player...</div></div>';
+    }
 
     const _s = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
     _s('btn-share-text',     TEXTS.share);
@@ -1411,14 +1506,19 @@ async function initWatchPage() {
         await loadTVSeasons(id);
     }
     await fetchMovieDetails(type, id);
-    initProgressListener(id, window._currentRuntimeMinutes || 0);
+    if (type === 'tv') {
+        renderAnimeDubToggle(window._animeRoute?.route === 'use_anime');
+        updatePlayer(type, id);   // single load, after anime route is known
+    } else {
+        renderAnimeDubToggle(false);
+    }
     await fetchCertification(type, id);
     await fetchCast(type, id);
     await fetchSimilarMovies(type, id);
 }
 
 function updatePlayer(type, id) {
-    const el = document.getElementById('player-container') || document.getElementById('static-player');
+    const el = document.getElementById('player-container');
     if (!el) return;
 
     window._playerReadyTime = null;
@@ -1430,13 +1530,28 @@ function updatePlayer(type, id) {
         switch (currentServer) {
             case 1: src = `https://vidlink.pro/movie/${id}?autoplay=true`; break;
             case 2: src = `https://vsembed.ru/embed/movie/${id}?autoplay=1`; break;
+            case 3: src = `https://www.2embed.cc/embed/${id}`; break;
+            case 4: src = `https://multiembed.mov/?video_id=${id}&tmdb=1`; break;
+            case 5: src = `https://vidcore.org/embed/movie/${id}?autoPlay=true`; break;
             default: src = `https://vidlink.pro/movie/${id}?autoplay=true`;
         }
     } else {
+        const animeRoute = window._animeRoute;
+        const useAnime   = animeRoute?.route === 'use_anime' && animeRoute.mal_id;
         switch (currentServer) {
-            case 1: src = `https://vidlink.pro/tv/${id}/${currentSeason}/${currentEpisode}?autoplay=true`; break;
+            case 1:
+                src = useAnime
+                    ? `https://vidlink.pro/anime/${animeRoute.mal_id}/${currentEpisode}/${currentAnimeDubType}?fallback=true&autoplay=true`
+                    : `https://vidlink.pro/tv/${id}/${currentSeason}/${currentEpisode}?autoplay=true&nextbutton=true`;
+                break;
             case 2: src = `https://vsembed.ru/embed/tv/${id}/${currentSeason}/${currentEpisode}?autoplay=1`; break;
-            default: src = `https://vidlink.pro/tv/${id}/${currentSeason}/${currentEpisode}?autoplay=true`;
+            case 3: src = `https://www.2embed.cc/embedtv/${id}&s=${currentSeason}&e=${currentEpisode}`; break;
+            case 4: src = `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${currentSeason}&e=${currentEpisode}`; break;
+            case 5: src = `https://vidcore.org/embed/tv/${id}/${currentSeason}/${currentEpisode}?autoPlay=true`; break;
+            default:
+                src = useAnime
+                    ? `https://vidlink.pro/anime/${animeRoute.mal_id}/${currentEpisode}/${currentAnimeDubType}?fallback=true&autoplay=true`
+                    : `https://vidlink.pro/tv/${id}/${currentSeason}/${currentEpisode}?autoplay=true&nextbutton=true`;
         }
     }
 
@@ -1464,8 +1579,35 @@ window.changeServer = function (serverNum) {
     trackEvent('server_select', { server_number: serverNum });
     document.querySelectorAll('.server-btn').forEach((btn, idx) => btn.classList.toggle('active', idx === serverNum - 1));
     const p = new URLSearchParams(window.location.search);
-    let type = p.get('type'), id = p.get('id');
-    if (!type && window.XUDO_STATIC_DATA) { type = window.XUDO_STATIC_DATA.type; id = window.XUDO_STATIC_DATA.id; }
+    const type = p.get('type'), id = p.get('id');
+    if (type && id) updatePlayer(type, id);
+};
+
+// Shows or removes the Sub/Dub toggle inside #control-bar.
+// Only called when _animeRoute.route === "use_anime" and type === "tv".
+function renderAnimeDubToggle(show) {
+    const bar = document.getElementById('control-bar');
+    if (!bar) return;
+    const existing = document.getElementById('anime-dub-control');
+    if (!show) { if (existing) existing.remove(); return; }
+    if (existing) return;
+    const div = document.createElement('div');
+    div.id        = 'anime-dub-control';
+    div.className = 'server-control';
+    div.innerHTML =
+        `<span class="server-label">Audio:</span>` +
+        `<button class="server-btn${currentAnimeDubType === 'sub' ? ' active' : ''}" onclick="window.changeAnimeDub('sub')">Sub</button>` +
+        `<button class="server-btn${currentAnimeDubType === 'dub' ? ' active' : ''}" onclick="window.changeAnimeDub('dub')">Dub</button>`;
+    bar.appendChild(div);
+}
+
+window.changeAnimeDub = function (dubType) {
+    currentAnimeDubType = dubType;
+    document.querySelectorAll('#anime-dub-control .server-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.toLowerCase() === dubType);
+    });
+    const p = new URLSearchParams(window.location.search);
+    const type = p.get('type'), id = p.get('id');
     if (type && id) updatePlayer(type, id);
 };
 
@@ -1575,11 +1717,61 @@ async function loadEpisodesForSeason(id, sn) {
     }
 }
 
+// Returns true only when BOTH conditions hold:
+//   1. genres includes Animation (TMDB genre id 16)
+//   2. origin is Japan — TV uses origin_country (string[]), movie uses production_countries ({iso_3166_1}[])
+// Result is written to window._isAnimeContent for downstream slices.
+function detectAnime(type, d) {
+    const hasAnimation = (d.genres || []).some(g => g.id === 16);
+    if (!hasAnimation) return false;
+    return type === 'tv'
+        ? (d.origin_country || []).includes('JP')
+        : (d.production_countries || []).some(c => c.iso_3166_1 === 'JP');
+}
+
+// Tokens in candidate titles that signal a multi-season anime series.
+// Matches: "Season 2+", "2nd/3rd/Nth Season", "Part 2+", "Final Season",
+//          "Cour 2+", and standalone Roman numerals II–IX.
+const _MULTI_SEASON_RE = /\b(season\s*[2-9\d]|\d+(?:nd|rd|th)\s+season|part\s*[2-9\d]|final\s+season|cour\s*[2-9]|II|III|IV|VI|VII|VIII|IX)\b/i;
+
+// Resolves whether to use the anime embed route or fall back to standard TV.
+// Returns { route: "use_anime", mal_id } or { route: "fallback_tv" }.
+// Always falls back on any error — the anime route must never crash the page.
+// Result is stored in window._animeRoute for downstream slices.
+async function resolveAnimeRoute(tmdbTitle) {
+    if (!window._isAnimeContent) return { route: 'fallback_tv' };
+
+    let candidates;
+    try {
+        const res = await fetch(`/api/mal/search?title=${encodeURIComponent(tmdbTitle)}`);
+        if (!res.ok) return { route: 'fallback_tv' };
+        const json = await res.json();
+        candidates = json.candidates;
+    } catch (_) {
+        return { route: 'fallback_tv' };
+    }
+
+    if (!Array.isArray(candidates) || candidates.length === 0) return { route: 'fallback_tv' };
+
+    // Collect every string title form for a candidate.
+    const allTitlesOf = c => {
+        const at = c.alternative_titles || {};
+        return [c.title, at.en, at.ja, ...(at.synonyms || [])].filter(Boolean);
+    };
+
+    // Any candidate carrying a multi-season marker → entire show is multi-season.
+    const isMultiSeason = candidates.some(c => allTitlesOf(c).some(t => _MULTI_SEASON_RE.test(t)));
+    if (isMultiSeason) return { route: 'fallback_tv' };
+
+    return { route: 'use_anime', mal_id: candidates[0].mal_id };
+}
+
 async function fetchMovieDetails(type, id) {
     try {
         const res = await fetch(`${BASE_URL}/${type}/${id}?language=${CURRENT_LANG}`);
         if (!res.ok) return (document.querySelector('.watch-container').innerHTML = '<div class="error-message">Not Found</div>');
         const d = await res.json();
+        window._isAnimeContent = detectAnime(type, d);
         try { updateContinueWatching(d); } catch (_) {}
 
         let overviewClean = (d.overview || '').trim();
@@ -1591,14 +1783,11 @@ async function fetchMovieDetails(type, id) {
         }
 
         const title = d.title || d.name;
+        window._animeRoute = await resolveAnimeRoute(title);
         const year  = (d.release_date || d.first_air_date || '').split('-')[0] || '----';
         const rt    = type === 'movie' && d.runtime
             ? `${Math.floor(d.runtime / 60)}h ${d.runtime % 60}m`
             : (type === 'tv' && d.episode_run_time?.[0] ? `${d.episode_run_time[0]}m / ep` : 'N/A');
-        window._currentRuntimeMinutes = type === 'movie'
-            ? (d.runtime || 90)
-            : (d.episode_run_time?.[0] || 45);
-
         updateSEOMeta(`${title} (${year}) - Reviews & Details | XUDOMovie`, `Read reviews and watch the trailer for ${title}.`);
         trackPageView(`${title} (${year}) | XUDOMovie`, window.location.pathname + window.location.search);
 
@@ -1612,14 +1801,17 @@ async function fetchMovieDetails(type, id) {
         document.getElementById('detail-rating').textContent   = `⭐ ${d.vote_average?.toFixed(1) || 'NR'}`;
         document.getElementById('detail-runtime').textContent  = rt;
 
+        const taglineEl = document.getElementById('detail-tagline');
+        if (taglineEl && d.tagline) { taglineEl.textContent = d.tagline; taglineEl.style.display = 'block'; }
+
+        const statusEl = document.getElementById('detail-status');
+        if (statusEl && type === 'tv' && d.status) { statusEl.textContent = d.status.toUpperCase(); statusEl.style.display = 'inline-block'; }
+
         const img = document.getElementById('detail-poster');
         if (img) { img.src = d.poster_path ? IMG_POSTER + d.poster_path : 'https://via.placeholder.com/500x750?text=No+Poster'; img.alt = title; }
 
         const genres = document.getElementById('detail-genres');
         if (genres && d.genres) genres.innerHTML = d.genres.map(g => `<span class="genre-tag">${sanitizeHTML(g.name)}</span>`).join('');
-
-        const watchFullBtn = document.getElementById('watch-full-btn');
-        if (watchFullBtn) { watchFullBtn.href = `https://xudomovie.us/watch.html?type=${type}&id=${id}`; watchFullBtn.target = '_blank'; }
 
         window.initPageActionButtons(id, type, title, d.poster_path ? IMG_POSTER + d.poster_path : '', year, d.vote_average?.toFixed(1) || 'NR');
     } catch (error) {
@@ -1802,14 +1994,30 @@ async function initPersonPage() {
                     <button id="tab-tv" class="person-tab-btn" onclick="filterPersonCredits('tv')">${TEXTS.tabTV}</button>
                 </div>
                 <div class="person-filmography-grid" id="filmography-grid"></div>
+                <div class="load-more-container">
+                    <button id="filmography-load-more" class="load-more-btn" style="display:none;" onclick="loadMorePersonCredits()">${TEXTS.loadMore}</button>
+                </div>
             </div>`;
 
-        const seen       = new Set();
-        const allCredits = (credits.cast || []).filter(i => {
-            if (seen.has(i.id)) return false;
-            seen.add(i.id);
-            return (i.media_type === 'movie' || i.media_type === 'tv') && i.poster_path;
-        }).sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+        attachCardDelegation('#filmography-grid');
+
+        const seen        = new Set();
+        const creditDate  = i => i.release_date || i.first_air_date || '';
+        const allCredits  = (credits.cast || []).filter(i => {
+            if ((i.media_type !== 'movie' && i.media_type !== 'tv') || !i.poster_path) return false;
+            const key = `${i.media_type}:${i.id}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        }).sort((a, b) => {
+            const da = creditDate(a), db = creditDate(b);
+            if (da !== db) {
+                if (!da) return 1;   // tanpa tanggal -> taruh paling bawah
+                if (!db) return -1;
+                return db < da ? -1 : 1;   // terbaru -> terlama
+            }
+            return (b.popularity || 0) - (a.popularity || 0);
+        });
 
         container._credits = allCredits;
         renderPersonCredits(allCredits.filter(i => i.media_type === 'movie'));
@@ -1820,13 +2028,47 @@ async function initPersonPage() {
     }
 }
 
+const FILMOGRAPHY_PAGE_SIZE = 60;
+
 function renderPersonCredits(credits) {
     const grid = document.getElementById('filmography-grid');
+    const btn  = document.getElementById('filmography-load-more');
     if (!grid) return;
-    if (!credits.length) { grid.innerHTML = `<div class="no-results">${TEXTS.noFilmography}</div>`; return; }
-    grid.innerHTML = credits.slice(0, 60).map(i => createCardHTML(i, i.media_type)).join('');
-    attachCardDelegation('#filmography-grid');
+
+    grid._list  = credits;
+    grid._shown = 0;
+
+    if (!credits.length) {
+        grid.innerHTML = `<div class="no-results">${TEXTS.noFilmography}</div>`;
+        if (btn) btn.style.display = 'none';
+        return;
+    }
+    grid.innerHTML = '';
+    appendPersonCredits();
 }
+
+function appendPersonCredits() {
+    const grid = document.getElementById('filmography-grid');
+    const btn  = document.getElementById('filmography-load-more');
+    if (!grid || !grid._list) return;
+
+    const next = grid._list.slice(grid._shown, grid._shown + FILMOGRAPHY_PAGE_SIZE);
+    if (next.length) {
+        grid.insertAdjacentHTML('beforeend', next.map(i => createCardHTML(i, i.media_type)).join(''));
+        grid._shown += next.length;
+    }
+
+    if (btn) {
+        btn.textContent   = TEXTS.loadMore;
+        btn.style.display = grid._shown < grid._list.length ? 'inline-block' : 'none';
+    }
+}
+
+window.loadMorePersonCredits = function () {
+    const grid = document.getElementById('filmography-grid');
+    appendPersonCredits();
+    if (grid) trackEvent('load_more', { endpoint: 'person_filmography', shown: grid._shown, total: grid._list?.length || 0 });
+};
 
 window.filterPersonCredits = function (type) {
     document.querySelectorAll('.person-tab-btn').forEach(b => b.classList.remove('active'));
@@ -1890,16 +2132,6 @@ window.togglePageWatchLater = function () {
     _refreshPageButtons();
 };
 
-function initStaticPage() {
-    const data = window.XUDO_STATIC_DATA;
-    if (!data) return;
-    updatePlayer(data.type, data.id);
-    try { updateContinueWatching({ id: data.id, media_type: data.type, title: data.title, poster_path: data.poster, release_date: data.year, vote_average: parseFloat(data.rating) }); } catch (_) {}
-    initProgressListener(data.id, 90);
-    if (typeof fetchSimilarMovies === 'function') fetchSimilarMovies(data.type, data.id);
-    window.initPageActionButtons(data.id, data.type, data.title, data.poster, data.year, data.rating);
-}
-
 function initBackToTop() {
     const btn       = document.createElement('button');
     btn.className   = 'back-to-top';
@@ -1957,16 +2189,6 @@ window.dismissAdBlockBanner = function () {
     localStorage.setItem('xudo_adblock_dismissed', Date.now().toString());
 };
 
-window.addEventListener('message', (e) => {
-    if (e.origin !== window.location.origin) return;
-    if (e.data && e.data.xudoEvent === 'ad_banner_click') {
-        trackEvent('ad_banner_click', { page: window.location.pathname });
-    }
-    if (e.data && e.data.adBannerHeight) {
-        const iframe = document.querySelector('iframe[src="ad-banner.html"]');
-        if (iframe) iframe.style.height = (e.data.adBannerHeight + 4) + 'px';
-    }
-});
 
 document.addEventListener('DOMContentLoaded', () => {
     updateCanonical();
@@ -1981,7 +2203,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if      (document.getElementById('hero-slider'))      initHome();
         else if (document.getElementById('browse-grid'))      initBrowse();
         else if (document.getElementById('player-container')) initWatchPage();
-        else if (document.getElementById('static-player'))    initStaticPage();
         else if (document.getElementById('person-container')) initPersonPage();
     };
 

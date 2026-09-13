@@ -4,25 +4,24 @@ const _FOOTER_LANG = localStorage.getItem('xudo_lang') || 'en-US';
 
 const _FOOTER_TRANS = window.XUDO_I18N.FOOTER_TRANS; // moved to js/i18n/translations.js (single source of truth)
 
-const _ft = _FOOTER_TRANS[_FOOTER_LANG] || _FOOTER_TRANS['en-US'];
+const _ft   = _FOOTER_TRANS[_FOOTER_LANG] || _FOOTER_TRANS['en-US'];
+const _main = (window.XUDO_I18N.TRANSLATIONS[_FOOTER_LANG] || window.XUDO_I18N.TRANSLATIONS['en-US']);
 
 const FOOTER_COLS = [
     {
-        heading : _ft.colMovies,
+        heading : _ft.colCategories,
         links   : [
-            { label: _ft.popMovies,  href: `browse.html?endpoint=/movie/popular&title=${encodeURIComponent(_ft.popMovies)}&type=movie`       },
-            { label: _ft.nowPlay,    href: `browse.html?endpoint=/movie/now_playing&title=${encodeURIComponent(_ft.nowPlay)}&type=movie`      },
-            { label: _ft.upcoming,   href: `browse.html?endpoint=/movie/upcoming&title=${encodeURIComponent(_ft.upcoming)}&type=movie`        },
-            { label: _ft.topMovies,  href: `browse.html?endpoint=/movie/top_rated&title=${encodeURIComponent(_ft.topMovies)}&type=movie`      },
-        ],
-    },
-    {
-        heading : _ft.colTV,
-        links   : [
-            { label: _ft.popTV,    href: `browse.html?endpoint=/tv/popular&title=${encodeURIComponent(_ft.popTV)}&type=tv`          },
-            { label: _ft.airToday, href: `browse.html?endpoint=/tv/airing_today&title=${encodeURIComponent(_ft.airToday)}&type=tv`  },
-            { label: _ft.onAir,    href: `browse.html?endpoint=/tv/on_the_air&title=${encodeURIComponent(_ft.onAir)}&type=tv`       },
-            { label: _ft.topTV,    href: `browse.html?endpoint=/tv/top_rated&title=${encodeURIComponent(_ft.topTV)}&type=tv`        },
+            { label: _main.movPopular,      href: 'index.html#sec-latest'    },
+            { label: _main.latestTvSection, href: 'index.html#sec-latest-tv' },
+            { label: _main.animeSection,    href: 'index.html#sec-anime'     },
+            { label: _main.appleSection,    href: 'index.html#sec-apple'     },
+            { label: _main.disneySection,   href: 'index.html#sec-disney'    },
+            { label: _main.hboSection,      href: 'index.html#sec-hbo'       },
+            { label: _main.netflixSection,  href: 'index.html#sec-netflix'   },
+            { label: _main.primeSection,    href: 'index.html#sec-prime'     },
+            { label: _main.chinese,          href: 'index.html#sec-chinese'   },
+            { label: _main.indianSection,    href: 'index.html#sec-indian'    },
+            { label: _main.korean,           href: 'index.html#sec-korean'    },
         ],
     },
     {

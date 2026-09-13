@@ -17,23 +17,21 @@
         <meta name="robots" content="noindex, nofollow">
         <link rel="canonical" href="https://xudomovie.us/">
         <link href="https://fonts.googleapis.com/css2?family=Saira:wght@300;400;600;700&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="css/style.css?v=21">
+        <link rel="stylesheet" href="css/style.css?v=22">
         <link rel="icon" href="icon.svg" type="image/svg+xml">
     </head>
     <body>
         <div id="global-header-placeholder"></div>
         <div class="player-wrapper" id="player-container"></div>
-        <div class="ad-banner-container ad-mb-5">
-            <div class="ad-banner ad-transparent">
-                <iframe src="ad-banner.html" scrolling="no" class="ad-iframe"></iframe>
-            </div>
-        </div>
         <div class="watch-container">
             <div class="control-bar" id="control-bar">
                 <div class="server-control">
                     <span class="server-label">Server:</span>
                     <button class="server-btn active" onclick="changeServer(1)">1</button>
                     <button class="server-btn" onclick="changeServer(2)">2</button>
+                    <button class="server-btn" onclick="changeServer(3)">3</button>
+                    <button class="server-btn" onclick="changeServer(4)">4</button>
+                    <button class="server-btn" onclick="changeServer(5)">5</button>
                 </div>
             </div>
             <div id="ublock-note" style="display:flex;align-items:center;gap:10px;margin:10px 0 24px;padding:10px 14px;background:rgba(229,9,20,0.07);border:1px solid rgba(229,9,20,0.25);border-left:3px solid #e50914;border-radius:8px;">
@@ -59,12 +57,14 @@
                 </div>
                 <div class="details-container">
                     <h1 id="detail-title">Loading...</h1>
+                    <p id="detail-tagline" class="hero-tagline" style="display:none;margin-bottom:10px;"></p>
                     <div class="metadata">
                         <span id="detail-rating" class="rating">--</span>
                         <span id="detail-year" class="year">----</span>
                         <span id="detail-cert" class="quality" style="display:none;">--</span>
                         <span id="detail-runtime" class="quality">-- min</span>
                         <span class="quality">HD</span>
+                        <span id="detail-status" class="hero-status-badge" style="display:none;"></span>
                     </div>
                     <div class="genres" id="detail-genres" style="margin-bottom: 20px;"></div>
                     <p class="overview" id="detail-overview">Fetching description...</p>
@@ -110,7 +110,7 @@
         <script src="js/i18n/translations.js"></script>
         <script src="js/global-header.js"></script>
         <script src="js/global-footer.js"></script>
-        <script src="js/main.js?v=10"></script>
+        <script src="js/main.js?v=11"></script>
         <script src="js/visitor-counter.js" defer></script>
         <div id="trailer-modal" class="trailer-modal">
             <div class="trailer-modal-content">

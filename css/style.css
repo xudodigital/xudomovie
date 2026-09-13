@@ -44,7 +44,7 @@ a {
     backdrop-filter: blur(0);
     -webkit-backdrop-filter: blur(0);
     border-radius: 0;
-    transition: background 0.3s, backdrop-filter 0.3s, padding 0.3s, box-shadow 0.3s, top 0.3s, left 0.3s, right 0.3s, width 0.3s, border-radius 0.3s;
+    transition: background 0.3s, backdrop-filter 0.3s, -webkit-backdrop-filter 0.3s, padding 0.3s, box-shadow 0.3s, top 0.3s, left 0.3s, right 0.3s, width 0.3s, border-radius 0.3s;
 }
 
 .movie-header.scrolled {
@@ -523,6 +523,58 @@ a {
     text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
 }
 
+.hero-logo {
+    display: block;
+    max-width: 400px;
+    max-height: 150px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    margin-bottom: 10px;
+    filter: drop-shadow(2px 2px 8px rgba(0,0,0,0.8));
+}
+
+.hero-tagline {
+    font-style: italic;
+    color: rgba(255,255,255,0.7);
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+    text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
+}
+
+.hero-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.hero-rating {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #f5c518;
+}
+
+.hero-attrs {
+    color: rgba(255,255,255,0.75);
+    font-size: 0.92rem;
+}
+
+.hero-status-badge {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.35);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 3px 9px;
+    border-radius: 4px;
+}
+
 .hero-desc {
     color: #ddd;
     margin-bottom: 25px;
@@ -562,13 +614,13 @@ a {
     transition: opacity 0.5s ease;
 }
 
-.hero-video-preview::after {
+.hero-slide::after {
     content: '';
     position: absolute;
     inset: 0;
-    z-index: 2;
+    z-index: 1;
     pointer-events: none;
-    background: linear-gradient(to top, #0f0f0f, transparent 90%);
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0.15) 100%);
 }
 
 .hero-slide.playing .hero-video-preview {
@@ -579,13 +631,13 @@ a {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 100%;
+    width: 177.78vh;
     height: 56.25vw;
+    min-width: 100%;
     min-height: 100%;
-    min-width: 177.78vh;
     border: none;
     pointer-events: none;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) scale(1.35);
 }
 
 .hero-indicators {
@@ -683,6 +735,7 @@ a {
     height: 240px;
     object-fit: cover;
     background: #222;
+    border-radius: 8px;
 }
 
 .card-rating {
@@ -788,22 +841,6 @@ a {
     font-size: 0.8rem;
     color: #888;
     margin-top: 2px;
-}
-
-.card-progress-bar {
-    position: relative;
-    width: 100%;
-    height: 6px;
-    background: rgba(0, 0, 0, 0.5);
-    overflow: hidden;
-    pointer-events: none;
-    margin-top: -7px;
-}
-
-.card-progress-fill {
-    height: 100%;
-    background: var(--main-red);
-    transition: width 0.3s ease;
 }
 
 .skeleton {
@@ -1268,6 +1305,84 @@ a {
 .server-btn:hover {
     background: var(--main-red);
     border-color: var(--main-red);
+}
+
+/* ── Movie/TV browse toggle — segmented pill (scoped to #media-type-toggle) ── */
+#media-type-toggle {
+    position      : relative;
+    background    : rgba(255,255,255,0.08);
+    border-radius : 999px;
+    padding       : 3px;
+    gap           : 0 !important;
+    display       : flex !important;
+    width         : fit-content;
+    margin-bottom : 16px;
+}
+
+/* sliding red indicator — position driven by JS via CSS custom props */
+#media-type-toggle::before {
+    content       : '';
+    position      : absolute;
+    top           : 3px;
+    bottom        : 3px;
+    left          : var(--ind-left, 3px);
+    width         : var(--ind-width, 0px);
+    background    : var(--main-red);
+    border-radius : 999px;
+    transition    : left 0.25s ease, width 0.25s ease;
+    pointer-events: none;
+}
+
+#media-type-toggle .server-btn {
+    text-align    : center;
+    background    : transparent !important;
+    border        : none !important;
+    color         : rgba(255,255,255,0.45) !important;
+    border-radius : 999px;
+    padding       : 8px 20px;
+    font-size     : 0.9rem;
+    font-family   : "Saira", sans-serif;
+    font-weight   : 600;
+    cursor        : pointer;
+    position      : relative;
+    z-index       : 1;
+    transition    : color 0.2s ease;
+    outline       : none;
+    white-space   : nowrap;
+}
+
+#media-type-toggle .server-btn.active {
+    color         : #fff !important;
+}
+
+#media-type-toggle .server-btn:hover:not(.active) {
+    color         : rgba(255,255,255,0.7) !important;
+}
+
+#media-type-toggle .server-btn:focus-visible {
+    outline       : 2px solid rgba(255,255,255,0.7);
+    outline-offset: -3px;
+}
+
+[data-theme="light"] #media-type-toggle {
+    background    : rgba(0,0,0,0.07);
+}
+
+[data-theme="light"] #media-type-toggle .server-btn {
+    color         : rgba(0,0,0,0.4) !important;
+}
+
+[data-theme="light"] #media-type-toggle .server-btn.active {
+    color         : #fff !important;
+}
+
+[data-theme="light"] #media-type-toggle .server-btn:hover:not(.active) {
+    color         : rgba(0,0,0,0.65) !important;
+}
+
+[data-theme="light"] #media-type-toggle .server-btn:focus-visible {
+    outline       : 2px solid rgba(0,0,0,0.4);
+    outline-offset: -3px;
 }
 
 .tv-controls {
@@ -2747,11 +2862,16 @@ a {
         box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8);
     }
 
+    .hero-wrapper  { height: 100vh; height: 100dvh; }
     .hero-content  { max-width: 100%; padding-left: 20px; padding-right: 20px; bottom: 80px; }
     .hero-title    { font-size: 2rem; line-height: 1.2; margin-bottom: 8px; }
+    .hero-logo     { max-width: 200px; max-height: 90px; }
     .hero-desc     { font-size: 0.9rem; margin-bottom: 15px; -webkit-line-clamp: 2; }
     .hero-tag      { font-size: 0.75rem; padding: 4px 10px; margin-bottom: 10px; }
     .hero-btn      { padding: 10px 20px; font-size: 0.9rem; }
+    .hero-tagline  { font-size: 0.82rem; margin-bottom: 6px; }
+    .hero-meta     { gap: 7px; margin-bottom: 10px; }
+    .hero-attrs    { font-size: 0.8rem; }
 
     .player-wrapper { margin-top: 80px; }
 
@@ -2788,26 +2908,6 @@ a {
 
     .actor-search-card { flex-direction: column; align-items: flex-start; }
 
-    .header-icons {
-        position: absolute;
-        top: 20px;
-        right: var(--padding-side);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-left: 0;
-    }
-
-    .header-icons .header-fav-btn,
-    .header-icons .header-fav-btn:last-of-type,
-    .header-icons .header-fav-btn:nth-last-of-type(2) {
-        position: static !important;
-        margin-left: 0 !important;
-        right: auto !important;
-        width: auto !important;
-        height: auto !important;
-    }
-
     .lang-code { display: none; }
     .lang-btn  { padding: 5px 8px; gap: 3px; }
     .lang-dropdown { right: 0; min-width: 260px; grid-template-columns: 1fr 1fr; }
@@ -2821,7 +2921,6 @@ a {
 
     .trailer-modal-content { width: 98%; max-width: none; }
 
-    /* Mobile keeps the original header: always-on gradient, solid on scroll, no floating pill. */
     .movie-header {
         top: 0;
         left: 0;
@@ -2834,36 +2933,38 @@ a {
     }
 
     .movie-header.scrolled {
-        top: 0;
-        left: 0;
-        right: 0;
-        width: 100%;
-        border-radius: 0;
-        background: #0f0f0f !important;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        width: auto;
+        border-radius: 999px;
+        background: rgba(18, 18, 18, 0.65) !important;
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.10);
     }
 
     [data-theme="light"] .movie-header {
-        background: linear-gradient(to bottom, rgba(242, 242, 242, 0.97) 0%, rgba(242, 242, 242, 0) 100%) !important;
+        background: rgba(245, 245, 245, 0.18) !important;
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
         box-shadow: none;
     }
 
     [data-theme="light"] .movie-header.scrolled {
-        background: rgba(242, 242, 242, 0.97) !important;
+        background: rgba(245, 245, 245, 0.70) !important;
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(0, 0, 0, 0.08);
     }
 
 }
 
 @media (max-width: 480px) {
     .hero-title   { font-size: 1.6rem; }
-    .hero-wrapper { height: 60vh; min-height: 500px; }
+    .hero-wrapper { height: 100vh; height: 100dvh; }
     .sk-brand-row,
     .sk-footer-top,
     .sk-top-right { flex-direction: column; align-items: flex-start; }

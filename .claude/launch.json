@@ -4,26 +4,64 @@
     {
       "name": "livefootball",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "3001", "-d", "/Users/ranggaoctaviyanto/Downloads/livefootball"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "3001",
+        "-d",
+        "/Users/ranggaoctaviyanto/Downloads/livefootball"
+      ],
       "port": 3001
     },
     {
       "name": "xudomovie",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "3003", "-d", "/Users/ranggaoctaviyanto/Documents/xudomovie"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "3003",
+        "-d",
+        "/Users/ranggaoctaviyanto/Documents/xudomovie"
+      ],
       "port": 3003
     },
     {
       "name": "xudomovie-wrangler",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["wrangler", "pages", "dev", ".", "--compatibility-date=2024-01-01", "--port=8788"],
+      "runtimeArgs": [
+        "wrangler",
+        "pages",
+        "dev",
+        ".",
+        "--compatibility-date=2024-01-01",
+        "--port=8788"
+      ],
       "port": 8788
     },
     {
       "name": "xudotrailer",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "3005", "-d", "/Users/ranggaoctaviyanto/Downloads/Master - XUDOTrailer - Copy"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "3005",
+        "-d",
+        "/Users/ranggaoctaviyanto/Downloads/Master - XUDOTrailer - Copy"
+      ],
       "port": 3005
+    },
+    {
+      "name": "xudotrailer-docs",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "wrangler",
+        "pages",
+        "dev",
+        "/Users/ranggaoctaviyanto/Documents/xudotrailer",
+        "--compatibility-date=2024-01-01",
+        "--port=8789"
+      ],
+      "port": 8789
     }
   ]
 }
