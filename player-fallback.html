@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Video unavailable — XUDOMovie</title>
+<style>
+/* Uses the established XUDOMovie brand roles in both themes. */
+:root {
+    --player-surface: var(--bg-main, #141414);
+    --player-on-surface: var(--text-white, #ffffff);
+    --player-outline: var(--text-muted, #b3b3b3);
+    --player-space: 1rem;
+    --player-target: 3rem;
+    --player-radius: 0.5rem;
+}
+[data-theme="light"] {
+    --player-surface: #f5f5f5;
+    --player-on-surface: #222222;
+    --player-outline: #595959;
+}
+.player-health {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--player-space);
+    min-block-size: var(--player-target);
+    padding: var(--player-space);
+    color: var(--player-on-surface);
+    background: var(--player-surface);
+    border-radius: var(--player-radius);
+}
+.player-health[hidden] { display: none; }
+.player-health p { flex: 1 1 20rem; font-size: 0.875rem; line-height: 1.6; }
+.player-health button {
+    min-block-size: var(--player-target);
+    padding-inline: var(--player-space);
+    border: 1px solid var(--player-outline);
+    border-radius: var(--player-radius);
+    color: inherit;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+}
+.player-health button:hover { background: color-mix(in srgb, var(--player-on-surface) 8%, transparent); }
+.player-health button:active { background: color-mix(in srgb, var(--player-on-surface) 10%, transparent); }
+.player-health button:focus-visible { outline: 2px solid var(--player-on-surface); outline-offset: 2px; }
+.player-fallback { margin: 0; min-height: 100vh; display: grid; place-items: center; color: var(--player-on-surface); background: var(--player-surface); font: 1rem/1.6 sans-serif; }
+.player-fallback p { max-width: 40rem; padding: var(--player-space); }
+
+</style>
+</head>
+<body class="player-fallback">
+<p id="fallback-message" role="status">The video source failed to load. Use the controls below the player to try again or change server.</p>
+<script>
+(function () {
+    'use strict';
+    if (localStorage.getItem('xudo_lang') === 'id-ID') {
+        document.getElementById('fallback-message').textContent = 'Sumber video gagal dimuat. Gunakan tombol di bawah player untuk mencoba ulang atau mengganti server.';
+    }
+    const attempt = new URLSearchParams(location.search).get('attempt');
+    if (window.parent !== window && attempt) {
+        window.parent.postMessage({ type: 'XUDO_PLAYER_FAILED', attempt }, location.origin);
+    }
+})();
+</script>
+</body>
+</html>

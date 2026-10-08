@@ -1529,8 +1529,8 @@ function updatePlayer(type, id) {
     if (type === 'movie') {
         switch (currentServer) {
             case 1: src = `https://vidlink.pro/movie/${id}?autoplay=true`; break;
-            case 2: src = `https://vsembed.ru/embed/movie/${id}?autoplay=1`; break;
-            case 3: src = `https://www.2embed.cc/embed/${id}`; break;
+            case 2: src = `https://vidsrc.sh/embed/movie/${id}?autoplay=1`; break;
+            case 3: src = `https://www.2embed.skin/embed/${id}`; break;
             case 4: src = `https://multiembed.mov/?video_id=${id}&tmdb=1`; break;
             case 5: src = `https://vidcore.org/embed/movie/${id}?autoPlay=true`; break;
             default: src = `https://vidlink.pro/movie/${id}?autoplay=true`;
@@ -1544,8 +1544,8 @@ function updatePlayer(type, id) {
                     ? `https://vidlink.pro/anime/${animeRoute.mal_id}/${currentEpisode}/${currentAnimeDubType}?fallback=true&autoplay=true`
                     : `https://vidlink.pro/tv/${id}/${currentSeason}/${currentEpisode}?autoplay=true&nextbutton=true`;
                 break;
-            case 2: src = `https://vsembed.ru/embed/tv/${id}/${currentSeason}/${currentEpisode}?autoplay=1`; break;
-            case 3: src = `https://www.2embed.cc/embedtv/${id}&s=${currentSeason}&e=${currentEpisode}`; break;
+            case 2: src = `https://vidsrc.sh/embed/tv/${id}/${currentSeason}/${currentEpisode}?autoplay=1`; break;
+            case 3: src = `https://www.2embed.skin/embedtv/${id}&s=${currentSeason}&e=${currentEpisode}`; break;
             case 4: src = `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${currentSeason}&e=${currentEpisode}`; break;
             case 5: src = `https://vidcore.org/embed/tv/${id}/${currentSeason}/${currentEpisode}?autoPlay=true`; break;
             default:
@@ -1558,14 +1558,19 @@ function updatePlayer(type, id) {
     const iframe = document.createElement('iframe');
     iframe.src          = src;
     iframe.className    = 'player-frame';
+    iframe.title        = `Video player — Server ${currentServer}`;
     iframe.allowFullscreen = true;
     iframe.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
     iframe.scrolling    = 'no';
     iframe.frameBorder  = '0';
     iframe.style.cssText = 'width:100%;height:100%;border:none;';
-    iframe.addEventListener('load', () => {
-        window._playerReadyTime = Date.now();
-    }, { once: true });
+    window.XUDO_PLAYER_HEALTH?.begin(iframe, {
+        server: currentServer, type, id, season: currentSeason, episode: currentEpisode,
+        retry: () => updatePlayer(type, id),
+        nextServer: currentServer === 5 ? 1 : currentServer + 1,
+        next: () => window.changeServer(currentServer === 5 ? 1 : currentServer + 1),
+        track: event => trackEvent(event, { server: currentServer, content_type: type, content_id: id }),
+    });
     iframe.addEventListener('error', () => {
         trackEvent('player_error', { server: currentServer, content_type: type, content_id: id });
     }, { once: true });
