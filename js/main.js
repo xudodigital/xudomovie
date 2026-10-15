@@ -1521,37 +1521,30 @@ function updatePlayer(type, id) {
     const el = document.getElementById('player-container');
     if (!el) return;
 
-    window._playerReadyTime = null;
-
     el.innerHTML = '<div style="display:grid;place-items:center;height:100%;background:#000;color:#fff"><div class="loader">Loading Player...</div></div>';
 
     let src = '';
     if (type === 'movie') {
         switch (currentServer) {
-            case 1: src = `https://vidlink.pro/movie/${id}?autoplay=true`; break;
-            case 2: src = `https://vidsrc.sh/embed/movie/${id}?autoplay=1`; break;
+            case 1: src = `https://vidsrc.sh/embed/movie/${id}?autoplay=1`; break;
+            case 2: src = `https://vidlink.pro/movie/${id}?autoplay=true`; break;
             case 3: src = `https://www.2embed.skin/embed/${id}`; break;
-            case 4: src = `https://multiembed.mov/?video_id=${id}&tmdb=1`; break;
-            case 5: src = `https://vidcore.org/embed/movie/${id}?autoPlay=true`; break;
-            default: src = `https://vidlink.pro/movie/${id}?autoplay=true`;
+            case 4: src = `https://vidcore.org/embed/movie/${id}?autoPlay=true`; break;
+            default: src = `https://vidsrc.sh/embed/movie/${id}?autoplay=1`;
         }
     } else {
         const animeRoute = window._animeRoute;
         const useAnime   = animeRoute?.route === 'use_anime' && animeRoute.mal_id;
         switch (currentServer) {
-            case 1:
+            case 1: src = `https://vidsrc.sh/embed/tv/${id}/${currentSeason}/${currentEpisode}?autoplay=1`; break;
+            case 2:
                 src = useAnime
                     ? `https://vidlink.pro/anime/${animeRoute.mal_id}/${currentEpisode}/${currentAnimeDubType}?fallback=true&autoplay=true`
                     : `https://vidlink.pro/tv/${id}/${currentSeason}/${currentEpisode}?autoplay=true&nextbutton=true`;
                 break;
-            case 2: src = `https://vidsrc.sh/embed/tv/${id}/${currentSeason}/${currentEpisode}?autoplay=1`; break;
             case 3: src = `https://www.2embed.skin/embedtv/${id}&s=${currentSeason}&e=${currentEpisode}`; break;
-            case 4: src = `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${currentSeason}&e=${currentEpisode}`; break;
-            case 5: src = `https://vidcore.org/embed/tv/${id}/${currentSeason}/${currentEpisode}?autoPlay=true`; break;
-            default:
-                src = useAnime
-                    ? `https://vidlink.pro/anime/${animeRoute.mal_id}/${currentEpisode}/${currentAnimeDubType}?fallback=true&autoplay=true`
-                    : `https://vidlink.pro/tv/${id}/${currentSeason}/${currentEpisode}?autoplay=true&nextbutton=true`;
+            case 4: src = `https://vidcore.org/embed/tv/${id}/${currentSeason}/${currentEpisode}?autoPlay=true`; break;
+            default: src = `https://vidsrc.sh/embed/tv/${id}/${currentSeason}/${currentEpisode}?autoplay=1`;
         }
     }
 
@@ -1564,13 +1557,6 @@ function updatePlayer(type, id) {
     iframe.scrolling    = 'no';
     iframe.frameBorder  = '0';
     iframe.style.cssText = 'width:100%;height:100%;border:none;';
-    window.XUDO_PLAYER_HEALTH?.begin(iframe, {
-        server: currentServer, type, id, season: currentSeason, episode: currentEpisode,
-        retry: () => updatePlayer(type, id),
-        nextServer: currentServer === 5 ? 1 : currentServer + 1,
-        next: () => window.changeServer(currentServer === 5 ? 1 : currentServer + 1),
-        track: event => trackEvent(event, { server: currentServer, content_type: type, content_id: id }),
-    });
     iframe.addEventListener('error', () => {
         trackEvent('player_error', { server: currentServer, content_type: type, content_id: id });
     }, { once: true });
