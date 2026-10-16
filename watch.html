@@ -17,7 +17,7 @@
         <meta name="robots" content="noindex, nofollow">
         <link rel="canonical" href="https://xudomovie.us/">
         <link href="https://fonts.googleapis.com/css2?family=Saira:wght@300;400;600;700&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="css/style.css?v=22">
+        <link rel="stylesheet" href="css/style.css?v=26">
         <link rel="icon" href="icon.svg" type="image/svg+xml">
     </head>
     <body>
@@ -25,13 +25,30 @@
         <div class="player-wrapper" id="player-container"></div>
         <div class="watch-container">
             <div class="control-bar" id="control-bar">
-                <div class="server-control">
+                <div class="server-control" id="server-selector" role="group" aria-label="Video server">
                     <span class="server-label">Server:</span>
-                    <button class="server-btn active" onclick="changeServer(1)">1</button>
-                    <button class="server-btn" onclick="changeServer(2)">2</button>
-                    <button class="server-btn" onclick="changeServer(3)">3</button>
-                    <button class="server-btn" onclick="changeServer(4)">4</button>
+                    <button class="server-btn active" data-server="1" aria-pressed="true" title="VidSrc" onclick="changeServer(1)">1</button>
+                    <button class="server-btn" data-server="2" aria-pressed="false" title="VidLink" onclick="changeServer(2)">2</button>
+                    <button class="server-btn" data-server="3" aria-pressed="false" title="VidFast" onclick="changeServer(3)">3</button>
+                    <button class="server-btn" data-server="4" aria-pressed="false" title="VidCore" onclick="changeServer(4)">4</button>
+                    <button class="server-btn" data-server="5" aria-pressed="false" title="VidKing" onclick="changeServer(5)">5</button>
+                    <button class="server-btn" data-server="6" aria-pressed="false" title="2Embed" onclick="changeServer(6)">6</button>
                 </div>
+            </div>
+            <div id="player-sound-settings" class="player-sound-settings">
+                <label id="player-sound-label" for="player-sound-preference"></label>
+                <div class="player-sound-select">
+                    <select id="player-sound-preference" aria-describedby="player-sound-note"></select>
+                </div>
+                <small id="player-sound-note"></small>
+            </div>
+            <div id="watch-progress" class="watch-progress" hidden>
+                <div class="watch-progress-heading">
+                    <span id="watch-progress-label"></span>
+                    <button id="restart-playback" class="server-btn" type="button"></button>
+                </div>
+                <progress id="watch-progress-meter" max="100" value="0"></progress>
+                <span id="watch-progress-time"></span>
             </div>
             <div id="ublock-note" style="display:flex;align-items:center;gap:10px;margin:10px 0 24px;padding:10px 14px;background:rgba(229,9,20,0.07);border:1px solid rgba(229,9,20,0.25);border-left:3px solid #e50914;border-radius:8px;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="#e50914" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -106,10 +123,11 @@
             </svg>
         </button>
         <div id="global-footer-placeholder"></div>
-        <script src="js/i18n/translations.js"></script>
+        <script src="js/i18n/translations.js?v=4"></script>
         <script src="js/global-header.js"></script>
         <script src="js/global-footer.js"></script>
-        <script src="js/main.js?v=17"></script>
+        <script src="js/player-progress.js?v=5"></script>
+        <script src="js/main.js?v=25"></script>
         <script src="js/visitor-counter.js" defer></script>
         <div id="trailer-modal" class="trailer-modal">
             <div class="trailer-modal-content">

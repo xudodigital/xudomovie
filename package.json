@@ -3,7 +3,8 @@
   "private": true,
   "description": "Dev tooling only — XUDOMovie itself is a static site + Cloudflare Pages Functions, not a Node app.",
   "scripts": {
-    "dev": "wrangler pages dev . --compatibility-date=2024-01-01"
+    "dev": "wrangler pages dev . --compatibility-date=2024-01-01",
+    "test": "node --test tests/*.test.cjs"
   },
   "devDependencies": {
     "wrangler": "^3.90.0"

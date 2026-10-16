@@ -132,8 +132,7 @@ let currentPage = 1,
     isLoading = false,
     currentSeason = 1,
     currentEpisode = 1,
-    currentServer = 1,
-    currentAnimeDubType = 'sub';
+    currentServer = 1;
 let currentBrowseEndpoint = '',
     currentMediaType = 'movie',
     currentGenreId = null,
@@ -146,6 +145,9 @@ let searchCurrentPage = 1,
 let searchAllItems = [];
 let searchSortBy  = 'relevance';
 let currentSortBy = 'popularity.desc';
+let _watchMetadata = null;
+let _activePlayback = null;
+let _latestPlaybackProgress = null;
 
 function sanitizeHTML(str) {
     if (!str) return '';
@@ -195,29 +197,43 @@ function isWatchLater(id) {
     return (JSON.parse(localStorage.getItem('xudo_watch_later')) || []).some(f => f.id == id);
 }
 
+function readWatchHistory() {
+    try {
+        const history = JSON.parse(localStorage.getItem('xudo_history'));
+        return Array.isArray(history) ? history.filter(item => item && typeof item === 'object') : [];
+    } catch (_) { return []; }
+}
+
+function saveWatchHistory(item, progress) {
+    const type = item.media_type || (item.title ? 'movie' : 'tv');
+    let history = readWatchHistory();
+    const sameTitle = entry => entry.id == item.id && entry.type === type;
+    const previous = history.find(sameTitle);
+    history = history.filter(entry => !sameTitle(entry));
+    const sameEpisode = type === 'movie' || (previous?.season === currentSeason && previous?.episode === currentEpisode);
+    history.unshift({
+        id: item.id, type, title: item.title || item.name,
+        poster: item.poster_path ? (item.poster_path.startsWith('http') ? item.poster_path : IMG_POSTER + item.poster_path) : '',
+        year: (item.release_date || item.first_air_date || '').split('-')[0],
+        rating: item.vote_average, season: currentSeason, episode: currentEpisode, server: currentServer,
+        progress: progress || (sameEpisode ? previous?.progress : undefined),
+    });
+    try { localStorage.setItem('xudo_history', JSON.stringify(history.slice(0, 20))); } catch (_) {}
+}
+
+function supportsPlaybackProgress() {
+    return window.XUDO_PLAYBACK.supports(currentServer);
+}
+
 function updateContinueWatching(item) {
+    // Supported players enter history only after a validated playback event.
+    if (supportsPlaybackProgress()) {
+        if (_latestPlaybackProgress) saveWatchHistory(item, _latestPlaybackProgress);
+        return;
+    }
+    const server = currentServer, season = currentSeason, episode = currentEpisode;
     setTimeout(() => {
-        let history = JSON.parse(localStorage.getItem('xudo_history')) || [];
-        const existing = history.find(x => x.id == item.id);
-        history = history.filter(x => x.id !== item.id);
-
-        const s = typeof currentSeason  !== 'undefined' ? currentSeason  : 1;
-        const e = typeof currentEpisode !== 'undefined' ? currentEpisode : 1;
-
-        history.unshift({
-            id     : item.id,
-            type   : item.media_type || (item.title ? 'movie' : 'tv'),
-            title  : item.title || item.name,
-            poster : item.poster_path
-                ? (item.poster_path.startsWith('http') ? item.poster_path : IMG_POSTER + item.poster_path)
-                : 'https://via.placeholder.com/500',
-            year    : (item.release_date || item.first_air_date || '').split('-')[0],
-            rating  : item.vote_average,
-            season  : s,
-            episode : e,
-        });
-        if (history.length > 20) history.pop();
-        localStorage.setItem('xudo_history', JSON.stringify(history));
+        if (currentServer === server && currentSeason === season && currentEpisode === episode && _watchMetadata?.id == item.id) saveWatchHistory(item);
     }, 5000);
 }
 
@@ -228,6 +244,7 @@ function getTargetUrl(item) {
     if (type === 'tv' && item.season && item.episode) {
         extraParams = `&s=${item.season}&e=${item.episode}`;
     }
+    if (Number.isInteger(item.server) && item.server >= 1 && item.server <= 6) extraParams += `&server=${item.server}`;
     return localFile
         ? `${localFile.folder}/${localFile.slug}.html${extraParams ? '?' + extraParams.substring(1) : ''}`
         : `watch.html?type=${type}&id=${item.id}${extraParams}`;
@@ -236,6 +253,7 @@ function getTargetUrl(item) {
 window.clearHistory = () => {
     if (confirm(TEXTS.confirmClear)) {
         localStorage.removeItem('xudo_history');
+        window.XUDO_PLAYBACK.clear();
         document.getElementById('continue-watching-section')?.remove();
     }
 };
@@ -659,7 +677,7 @@ function createCardHTML(item, typeOverride) {
     const rating      = item.vote_average ? item.vote_average.toFixed(1) : 'NR';
     const isFav       = isFavorite(item.id);
     const isWL        = isWatchLater(item.id);
-    const targetLink    = getTargetUrl({ id: item.id, media_type: t, season: item.season, episode: item.episode });
+    const targetLink    = getTargetUrl({ id: item.id, media_type: t, season: item.season, episode: item.episode, server: item.server });
     const mediaTypeLabel = t === 'movie' ? 'Movie' : 'TV Show';
 
     const favIcon = isFav
@@ -673,6 +691,13 @@ function createCardHTML(item, typeOverride) {
     let continueBadge = '';
     if (t === 'tv' && item.season && item.episode) {
         continueBadge = `<span style="display:inline-block;margin-top:6px;background:var(--main-red);color:#fff;font-size:0.75rem;padding:3px 8px;border-radius:4px;font-weight:700;">S${item.season} E${item.episode}</span>`;
+    }
+
+    let progressHTML = '';
+    const progress = item.progress;
+    if (progress && Number.isFinite(progress.position) && Number.isFinite(progress.duration) && progress.duration > 0) {
+        const percent = Math.max(0, Math.min(100, Math.round(progress.position / progress.duration * 1000) / 10));
+        progressHTML = `<div class="card-watch-progress"><progress max="100" value="${percent}" aria-label="${sanitizeHTML(TEXTS.contWatch)}"></progress><span>${percent}% · ${window.XUDO_PLAYBACK.formatTime(progress.position)} / ${window.XUDO_PLAYBACK.formatTime(progress.duration)}</span></div>`;
     }
 
     return `
@@ -698,6 +723,7 @@ function createCardHTML(item, typeOverride) {
                 <div class="card-title">${title}</div>
                 <div class="card-year">${year} • ${t === 'movie' ? TEXTS.typeMovie : TEXTS.typeTv}</div>
                 ${continueBadge}
+                ${progressHTML}
             </div>
         </div>`;
 }
@@ -1042,7 +1068,7 @@ async function loadHeroSlider() {
 }
 
 function loadContinueWatching() {
-    const history = JSON.parse(localStorage.getItem('xudo_history')) || [];
+    const history = readWatchHistory().filter(item => !item.progress?.completed);
     if (!history.length) return;
     const main    = document.getElementById('main-content');
     const section = document.createElement('section');
@@ -1057,7 +1083,7 @@ function loadContinueWatching() {
             ${history.map(i => createCardHTML({
                 id: i.id, media_type: i.type, title: i.title,
                 poster_path: i.poster, release_date: i.year,
-                vote_average: +i.rating, season: i.season, episode: i.episode
+                vote_average: +i.rating, season: i.season, episode: i.episode, server: i.server, progress: i.progress
             })).join('')}
         </div>`;
     main.prepend(section);
@@ -1477,17 +1503,16 @@ async function initWatchPage() {
     const type = p.get('type'), id = p.get('id');
     currentSeason  = parseInt(p.get('s')) || 1;
     currentEpisode = parseInt(p.get('e')) || 1;
+    const requestedServer = Number(p.get('server'));
+    currentServer = Number.isInteger(requestedServer) && requestedServer >= 1 && requestedServer <= 6 ? requestedServer : 1;
+    syncServerButtons();
     if (!id || !type) return (window.location.href = 'index.html');
+    window.addEventListener('message', onPlayerProgress);
+    document.getElementById('restart-playback')?.addEventListener('click', restartPlayback);
+    initVidSrcSoundPreference();
 
-    // Movies load the player immediately. TV defers one step: the anime route
-    // (resolved inside fetchMovieDetails) changes the embed URL, so loading now
-    // would double-load the iframe for anime titles.
-    if (type !== 'tv') {
-        updatePlayer(type, id);
-    } else {
-        const el = document.getElementById('player-container');
-        if (el) el.innerHTML = '<div style="display:grid;place-items:center;height:100%;background:#000;color:#fff"><div class="loader">Loading Player...</div></div>';
-    }
+    // Every provider uses TMDB IDs, including anime on Server 2.
+    updatePlayer(type, id);
 
     const _s = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
     _s('btn-share-text',     TEXTS.share);
@@ -1506,15 +1531,83 @@ async function initWatchPage() {
         await loadTVSeasons(id);
     }
     await fetchMovieDetails(type, id);
-    if (type === 'tv') {
-        renderAnimeDubToggle(window._animeRoute?.route === 'use_anime');
-        updatePlayer(type, id);   // single load, after anime route is known
-    } else {
-        renderAnimeDubToggle(false);
-    }
     await fetchCertification(type, id);
     await fetchCast(type, id);
     await fetchSimilarMovies(type, id);
+}
+
+function renderWatchProgress(record, resumed = false) {
+    const panel = document.getElementById('watch-progress');
+    if (!panel) return;
+    panel.hidden = !supportsPlaybackProgress() || !record || record.position <= 0;
+    if (panel.hidden) return;
+    const percent = Math.min(100, Math.round(record.position / record.duration * 1000) / 10);
+    const time = window.XUDO_PLAYBACK.formatTime(record.position);
+    document.getElementById('watch-progress-label').textContent = record.completed
+        ? TEXTS.watchedComplete : (resumed ? TEXTS.resumeAt : TEXTS.progressSaved).replace('{time}', time);
+    const meter = document.getElementById('watch-progress-meter');
+    meter.value = percent;
+    meter.setAttribute('aria-label', TEXTS.contWatch);
+    document.getElementById('watch-progress-time').textContent = `${time} / ${window.XUDO_PLAYBACK.formatTime(record.duration)} · ${percent}%`;
+    const restart = document.getElementById('restart-playback');
+    restart.textContent = TEXTS.startOver;
+    restart.hidden = false;
+}
+
+function initVidSrcSoundPreference() {
+    const select = document.getElementById('player-sound-preference');
+    if (!select) return;
+    document.getElementById('player-sound-label').textContent = TEXTS.soundPreference;
+    document.getElementById('player-sound-note').textContent = TEXTS.soundPreferenceNote;
+    for (const [value, label] of [['auto', TEXTS.soundAuto], ['on', TEXTS.soundOn], ['off', TEXTS.soundOff]]) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        select.appendChild(option);
+    }
+    select.value = window.XUDO_PLAYBACK.getSoundPreference();
+    select.addEventListener('change', () => {
+        const saved = window.XUDO_PLAYBACK.setSoundPreference(select.value);
+        document.getElementById('player-sound-note').textContent = saved ? TEXTS.soundPreferenceNote : TEXTS.soundSessionOnly;
+        // Muting is safe immediately. Apply "on" at the next player start:
+        // unmuting a running video from the parent can make the browser pause it.
+        if (currentServer === 1 && select.value === 'off') window.XUDO_PLAYBACK.applySoundPreference(_activePlayback);
+    });
+}
+
+function onPlayerProgress(event) {
+    const playback = window.XUDO_PLAYBACK;
+    // The title arrives before autoplay starts, allowing VidSrc's own muted
+    // fallback to run if the browser refuses sound. Never force unmute on
+    // progress updates: that would override the viewer's mute button.
+    if (_activePlayback?.server === 1 && playback.isPlayerMessage(event, _activePlayback) && event.data?.type === 'PLAYER_TITLE') {
+        playback.applySoundPreference(_activePlayback);
+    }
+    const data = playback.readEvent(event, _activePlayback, _watchMetadata?.imdb_id);
+    if (!data) return;
+    // Ignore the initial zero sent while a saved seek is still being applied.
+    if (data.position === 0 && data.status !== 'seeked' && playback.get(_activePlayback)?.position > 0) return;
+    const record = playback.save(_activePlayback, data.position, data.duration, data.status);
+    if (!record) return;
+    _latestPlaybackProgress = record;
+    renderWatchProgress(record);
+    if (_watchMetadata) saveWatchHistory(_watchMetadata, record);
+}
+
+function restartPlayback() {
+    if (!_activePlayback) return;
+    const { type, id, season, episode } = _activePlayback;
+    window.XUDO_PLAYBACK.remove(_activePlayback);
+    const history = readWatchHistory().map(item => {
+        if (String(item.id) === String(id) && item.type === type &&
+            (type === 'movie' || (item.season === season && item.episode === episode))) {
+            const { progress, ...rest } = item;
+            return rest;
+        }
+        return item;
+    });
+    try { localStorage.setItem('xudo_history', JSON.stringify(history)); } catch (_) {}
+    updatePlayer(type, id);
 }
 
 function updatePlayer(type, id) {
@@ -1523,28 +1616,38 @@ function updatePlayer(type, id) {
 
     el.innerHTML = '<div style="display:grid;place-items:center;height:100%;background:#000;color:#fff"><div class="loader">Loading Player...</div></div>';
 
+    _activePlayback = null;
+    _latestPlaybackProgress = null;
+    const soundPanel = document.getElementById('player-sound-settings');
+    if (soundPanel) soundPanel.hidden = currentServer !== 1;
+    const params = new URLSearchParams(window.location.search);
+    params.set('server', String(currentServer));
+    if (type === 'tv') {
+        params.set('s', String(currentSeason));
+        params.set('e', String(currentEpisode));
+    }
+    window.history?.replaceState(null, '', `${window.location.pathname || 'watch.html'}?${params}`);
+    const content = { type, id, season: currentSeason, episode: currentEpisode };
     let src = '';
     if (type === 'movie') {
         switch (currentServer) {
-            case 1: src = `https://vidsrc.sh/embed/movie/${id}?autoplay=1`; break;
-            case 2: src = `https://vidlink.pro/movie/${id}?autoplay=true`; break;
-            case 3: src = `https://www.2embed.skin/embed/${id}`; break;
+            case 1: src = window.XUDO_PLAYBACK.buildUrl(content, CURRENT_LANG); break;
+            case 2: src = window.XUDO_PLAYBACK.buildUrl(content, CURRENT_LANG, 2); break;
+            case 3: src = window.XUDO_PLAYBACK.buildUrl(content, CURRENT_LANG, 3); break;
             case 4: src = `https://vidcore.org/embed/movie/${id}?autoPlay=true`; break;
-            default: src = `https://vidsrc.sh/embed/movie/${id}?autoplay=1`;
+            case 5: src = `https://www.vidking.net/embed/movie/${id}?autoPlay=true&color=e50914`; break;
+            case 6: src = `https://www.2embed.skin/embed/${id}`; break;
+            default: src = window.XUDO_PLAYBACK.buildUrl(content, CURRENT_LANG);
         }
     } else {
-        const animeRoute = window._animeRoute;
-        const useAnime   = animeRoute?.route === 'use_anime' && animeRoute.mal_id;
         switch (currentServer) {
-            case 1: src = `https://vidsrc.sh/embed/tv/${id}/${currentSeason}/${currentEpisode}?autoplay=1`; break;
-            case 2:
-                src = useAnime
-                    ? `https://vidlink.pro/anime/${animeRoute.mal_id}/${currentEpisode}/${currentAnimeDubType}?fallback=true&autoplay=true`
-                    : `https://vidlink.pro/tv/${id}/${currentSeason}/${currentEpisode}?autoplay=true&nextbutton=true`;
-                break;
-            case 3: src = `https://www.2embed.skin/embedtv/${id}&s=${currentSeason}&e=${currentEpisode}`; break;
+            case 1: src = window.XUDO_PLAYBACK.buildUrl(content, CURRENT_LANG); break;
+            case 2: src = window.XUDO_PLAYBACK.buildUrl(content, CURRENT_LANG, 2); break;
+            case 3: src = window.XUDO_PLAYBACK.buildUrl(content, CURRENT_LANG, 3); break;
             case 4: src = `https://vidcore.org/embed/tv/${id}/${currentSeason}/${currentEpisode}?autoPlay=true`; break;
-            default: src = `https://vidsrc.sh/embed/tv/${id}/${currentSeason}/${currentEpisode}?autoplay=1`;
+            case 5: src = `https://www.vidking.net/embed/tv/${id}/${currentSeason}/${currentEpisode}?autoPlay=true&color=e50914`; break;
+            case 6: src = `https://www.2embed.skin/embedtv/${id}&s=${currentSeason}&e=${currentEpisode}`; break;
+            default: src = window.XUDO_PLAYBACK.buildUrl(content, CURRENT_LANG);
         }
     }
 
@@ -1563,43 +1666,27 @@ function updatePlayer(type, id) {
 
     el.innerHTML = '';
     el.appendChild(iframe);
+    if (supportsPlaybackProgress()) _activePlayback = { ...content, server: currentServer, frame: iframe };
+    renderWatchProgress(_activePlayback ? window.XUDO_PLAYBACK.get(content) : null, true);
+}
+
+function syncServerButtons() {
+    document.querySelectorAll('#server-selector [data-server]').forEach(btn => {
+        const active = Number(btn.dataset.server) === currentServer;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-pressed', String(active));
+    });
 }
 
 window.changeServer = function (serverNum) {
+    if (!Number.isInteger(serverNum) || serverNum < 1 || serverNum > 6) return;
     currentServer = serverNum;
     trackEvent('server_select', { server_number: serverNum });
-    document.querySelectorAll('.server-btn').forEach((btn, idx) => btn.classList.toggle('active', idx === serverNum - 1));
+    syncServerButtons();
     const p = new URLSearchParams(window.location.search);
     const type = p.get('type'), id = p.get('id');
     if (type && id) updatePlayer(type, id);
-};
-
-// Shows or removes the Sub/Dub toggle inside #control-bar.
-// Only called when _animeRoute.route === "use_anime" and type === "tv".
-function renderAnimeDubToggle(show) {
-    const bar = document.getElementById('control-bar');
-    if (!bar) return;
-    const existing = document.getElementById('anime-dub-control');
-    if (!show) { if (existing) existing.remove(); return; }
-    if (existing) return;
-    const div = document.createElement('div');
-    div.id        = 'anime-dub-control';
-    div.className = 'server-control';
-    div.innerHTML =
-        `<span class="server-label">Audio:</span>` +
-        `<button class="server-btn${currentAnimeDubType === 'sub' ? ' active' : ''}" onclick="window.changeAnimeDub('sub')">Sub</button>` +
-        `<button class="server-btn${currentAnimeDubType === 'dub' ? ' active' : ''}" onclick="window.changeAnimeDub('dub')">Dub</button>`;
-    bar.appendChild(div);
-}
-
-window.changeAnimeDub = function (dubType) {
-    currentAnimeDubType = dubType;
-    document.querySelectorAll('#anime-dub-control .server-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.textContent.toLowerCase() === dubType);
-    });
-    const p = new URLSearchParams(window.location.search);
-    const type = p.get('type'), id = p.get('id');
-    if (type && id) updatePlayer(type, id);
+    if (!supportsPlaybackProgress() && _watchMetadata) updateContinueWatching(_watchMetadata);
 };
 
 async function loadTVSeasons(id) {
@@ -1632,9 +1719,7 @@ async function loadTVSeasons(id) {
         btn.setAttribute('aria-expanded', 'false');
         loadEpisodesForSeason(id, currentSeason);
         updatePlayer('tv', id);
-        let history = JSON.parse(localStorage.getItem('xudo_history')) || [];
-        const idx   = history.findIndex(x => x.id == id);
-        if (idx > -1) { history[idx].season = currentSeason; history[idx].episode = currentEpisode; localStorage.setItem('xudo_history', JSON.stringify(history)); }
+        if (!supportsPlaybackProgress() && _watchMetadata) saveWatchHistory(_watchMetadata);
     }
 
     try {
@@ -1696,9 +1781,7 @@ async function loadEpisodesForSeason(id, sn) {
                 card.classList.add('active');
                 trackEvent('select_episode', { content_id: id, season_number: currentSeason, episode_number: ep.episode_number, episode_title: ep.name || '' });
                 updatePlayer('tv', id);
-                let history = JSON.parse(localStorage.getItem('xudo_history')) || [];
-                const hi    = history.findIndex(x => x.id == id);
-                if (hi > -1) { history[hi].season = currentSeason; history[hi].episode = currentEpisode; localStorage.setItem('xudo_history', JSON.stringify(history)); }
+                if (!supportsPlaybackProgress() && _watchMetadata) saveWatchHistory(_watchMetadata);
             });
             grid.appendChild(card);
         });
@@ -1708,62 +1791,13 @@ async function loadEpisodesForSeason(id, sn) {
     }
 }
 
-// Returns true only when BOTH conditions hold:
-//   1. genres includes Animation (TMDB genre id 16)
-//   2. origin is Japan — TV uses origin_country (string[]), movie uses production_countries ({iso_3166_1}[])
-// Result is written to window._isAnimeContent for downstream slices.
-function detectAnime(type, d) {
-    const hasAnimation = (d.genres || []).some(g => g.id === 16);
-    if (!hasAnimation) return false;
-    return type === 'tv'
-        ? (d.origin_country || []).includes('JP')
-        : (d.production_countries || []).some(c => c.iso_3166_1 === 'JP');
-}
-
-// Tokens in candidate titles that signal a multi-season anime series.
-// Matches: "Season 2+", "2nd/3rd/Nth Season", "Part 2+", "Final Season",
-//          "Cour 2+", and standalone Roman numerals II–IX.
-const _MULTI_SEASON_RE = /\b(season\s*[2-9\d]|\d+(?:nd|rd|th)\s+season|part\s*[2-9\d]|final\s+season|cour\s*[2-9]|II|III|IV|VI|VII|VIII|IX)\b/i;
-
-// Resolves whether to use the anime embed route or fall back to standard TV.
-// Returns { route: "use_anime", mal_id } or { route: "fallback_tv" }.
-// Always falls back on any error — the anime route must never crash the page.
-// Result is stored in window._animeRoute for downstream slices.
-async function resolveAnimeRoute(tmdbTitle) {
-    if (!window._isAnimeContent) return { route: 'fallback_tv' };
-
-    let candidates;
-    try {
-        const res = await fetch(`/api/mal/search?title=${encodeURIComponent(tmdbTitle)}`);
-        if (!res.ok) return { route: 'fallback_tv' };
-        const json = await res.json();
-        candidates = json.candidates;
-    } catch (_) {
-        return { route: 'fallback_tv' };
-    }
-
-    if (!Array.isArray(candidates) || candidates.length === 0) return { route: 'fallback_tv' };
-
-    // Collect every string title form for a candidate.
-    const allTitlesOf = c => {
-        const at = c.alternative_titles || {};
-        return [c.title, at.en, at.ja, ...(at.synonyms || [])].filter(Boolean);
-    };
-
-    // Any candidate carrying a multi-season marker → entire show is multi-season.
-    const isMultiSeason = candidates.some(c => allTitlesOf(c).some(t => _MULTI_SEASON_RE.test(t)));
-    if (isMultiSeason) return { route: 'fallback_tv' };
-
-    return { route: 'use_anime', mal_id: candidates[0].mal_id };
-}
-
 async function fetchMovieDetails(type, id) {
     try {
         const res = await fetch(`${BASE_URL}/${type}/${id}?language=${CURRENT_LANG}`);
         if (!res.ok) return (document.querySelector('.watch-container').innerHTML = '<div class="error-message">Not Found</div>');
         const d = await res.json();
-        window._isAnimeContent = detectAnime(type, d);
-        try { updateContinueWatching(d); } catch (_) {}
+        _watchMetadata = { ...d, media_type: type };
+        try { updateContinueWatching(_watchMetadata); } catch (_) {}
 
         let overviewClean = (d.overview || '').trim();
         if (!overviewClean && CURRENT_LANG !== 'en-US') {
@@ -1774,7 +1808,6 @@ async function fetchMovieDetails(type, id) {
         }
 
         const title = d.title || d.name;
-        window._animeRoute = await resolveAnimeRoute(title);
         const year  = (d.release_date || d.first_air_date || '').split('-')[0] || '----';
         const rt    = type === 'movie' && d.runtime
             ? `${Math.floor(d.runtime / 60)}h ${d.runtime % 60}m`

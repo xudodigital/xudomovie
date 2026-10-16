@@ -843,6 +843,32 @@ a {
     margin-top: 2px;
 }
 
+.card-watch-progress { margin-top: 8px; font-size: 0.72rem; color: var(--text-muted); }
+.card-watch-progress span { display: block; margin-top: 3px; }
+.watch-progress { margin: -10px 0 24px; padding: 16px; border: 1px solid rgba(128,128,128,0.3); border-radius: 10px; }
+.watch-progress[hidden] { display: none; }
+.player-sound-settings { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0 0 24px; padding: 12px 16px; border: 1px solid rgba(128,128,128,.3); border-radius: 10px; }
+.player-sound-settings[hidden] { display: none; }
+.player-sound-settings label { font-size: .85rem; font-weight: 600; }
+.player-sound-select { position: relative; max-width: 100%; }
+.player-sound-select::after { content: ''; position: absolute; inset-inline-end: 16px; top: 50%; width: 7px; height: 7px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-70%) rotate(45deg); pointer-events: none; }
+.player-sound-settings select { appearance: none; -webkit-appearance: none; width: 100%; max-width: 100%; padding-block: 8px; padding-inline-start: 12px; padding-inline-end: 40px; border: 1px solid rgba(128,128,128,.5); border-radius: 8px; background: var(--bg-main); color: var(--text-white); font: inherit; font-size: .85rem; }
+.player-sound-settings select:focus-visible { outline: 2px solid #e50914; outline-offset: 2px; }
+.player-sound-settings small { flex-basis: 100%; color: var(--text-muted); line-height: 1.5; }
+@media (max-width: 768px) {
+    .player-sound-settings label { flex-basis: 100%; font-size: .9rem; }
+    .player-sound-select { width: 100%; min-width: 0; }
+    .player-sound-settings select { min-height: 44px; font-size: 16px; text-overflow: ellipsis; }
+    .player-sound-settings small { font-size: .78rem; overflow-wrap: anywhere; }
+}
+.watch-progress-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; }
+.watch-progress-heading span { font-weight: 600; }
+#watch-progress-time { display: block; margin-top: 6px; font-size: 0.8rem; color: var(--text-muted); }
+.watch-progress progress, .card-watch-progress progress { display: block; width: 100%; height: 6px; border: none; border-radius: 999px; overflow: hidden; background: rgba(128,128,128,0.25); accent-color: var(--main-red); }
+.watch-progress progress::-webkit-progress-bar, .card-watch-progress progress::-webkit-progress-bar { background: rgba(128,128,128,0.25); border-radius: 999px; }
+.watch-progress progress::-webkit-progress-value, .card-watch-progress progress::-webkit-progress-value { background: var(--main-red); border-radius: 999px; }
+.watch-progress progress::-moz-progress-bar, .card-watch-progress progress::-moz-progress-bar { background: var(--main-red); border-radius: 999px; }
+
 .skeleton {
     background: #1f1f1f;
     background: linear-gradient(90deg, #1f1f1f 25%, #2a2a2a 50%, #1f1f1f 75%);
