@@ -33,7 +33,7 @@ function loadPlayer(search = '?type=movie&id=27205', language = 'en-US') {
             createElement: () => ({ contentWindow: { messages: [], postMessage(data, origin) { this.messages.push({ data, origin }); } }, style: {}, setAttribute() {}, addEventListener() {} }),
         },
     });
-    for (const file of ['js/i18n/translations.js', 'js/player-progress.js', 'js/main.js']) {
+    for (const file of ['js/i18n/translations.js', 'js/player-progress.js', 'js/catalog-policy.js', 'js/main.js']) {
         vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), context, { filename: file });
     }
     return { context, player, buttons, audioButton, stored };
@@ -256,7 +256,7 @@ test('All 19 languages have resume labels and valid subtitle preferences', () =>
 
 test('Continue Watching cards show real progress and metadata updates preserve it', () => {
     const { context, stored } = loadPlayer();
-    const item = { id: 27205, title: 'Inception', media_type: 'movie', progress: { position: 300, duration: 600 } };
+    const item = { id: 27205, title: 'Inception', media_type: 'movie', release_date: '2010-07-16', vote_average: 8.8, progress: { position: 300, duration: 600 } };
     context.saveWatchHistory(item, item.progress);
     context.saveWatchHistory(item);
     assert.equal(JSON.parse(stored.get('xudo_history'))[0].progress.position, 300);
@@ -449,7 +449,7 @@ test('Changing servers persists selection in the watch URL without losing the ep
 test('Server 2 anime uses TMDB, saves progress and restores the correct episode', () => {
     const {context, player, stored} = loadPlayer('?type=tv&id=37854&s=1&e=2');
     context.window._animeRoute = {route:'use_anime',mal_id:21}; // Legacy hint must not select the MAL route.
-    vm.runInContext("currentSeason=1; currentEpisode=2; _watchMetadata={id:37854,name:'One Piece',media_type:'tv'};",context);
+    vm.runInContext("currentSeason=1; currentEpisode=2; _watchMetadata={id:37854,name:'One Piece',media_type:'tv',vote_average:8.7};",context);
     let watchUrl;
     context.window.history={replaceState(_state,_title,url){watchUrl=url;}};
     context.window.changeServer(2);
@@ -473,7 +473,7 @@ test('Server 2 anime uses TMDB, saves progress and restores the correct episode'
     assert.equal(history.server,2);
     assert.equal(history.episode,2);
     assert.equal(history.progress.position,125);
-    const card=context.createCardHTML({...history,media_type:history.type,vote_average:history.rating});
+    const card=context.createCardHTML({...history,media_type:history.type,first_air_date:'1999-10-20',vote_average:history.rating});
     assert.match(card,/data-href="watch.html\?type=tv&id=37854&s=1&e=2&server=2"/);
     assert.equal(context.window.XUDO_PLAYBACK.get({type:'tv',id:21,season:1,episode:2}),null);
     vm.runInContext('currentEpisode=3;',context);

@@ -847,6 +847,20 @@ a {
 .card-watch-progress span { display: block; margin-top: 3px; }
 .watch-progress { margin: -10px 0 24px; padding: 16px; border: 1px solid rgba(128,128,128,0.3); border-radius: 10px; }
 .watch-progress[hidden] { display: none; }
+.stream-availability { margin: -8px 0 20px; padding: 14px 16px; border: 1px solid rgba(128,128,128,.35); border-radius: 10px; line-height: 1.5; }
+.stream-availability[hidden] { display: none; }
+.stream-availability-heading, .stream-availability-result { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; }
+.stream-availability-heading { margin-bottom: 6px; font-size: .85rem; }
+#stream-availability-context, .stream-availability small { color: var(--text-muted); }
+.stream-availability small { display: block; margin-top: 8px; font-size: .78rem; overflow-wrap: anywhere; }
+#stream-availability-status { flex: 1 1 180px; font-size: .9rem; }
+.stream-availability[data-state="available"] #stream-availability-status { color: #63cf99; }
+.stream-availability[data-state="unavailable"] #stream-availability-status { color: #f0b96c; }
+[data-theme="light"] .stream-availability[data-state="available"] #stream-availability-status { color: #176c3e; }
+[data-theme="light"] .stream-availability[data-state="unavailable"] #stream-availability-status { color: #885007; }
+#stream-availability-retry { min-height: 44px; white-space: normal; }
+#stream-availability-retry:disabled { opacity: .5; cursor: wait; }
+#stream-availability-retry:focus-visible { outline: 2px solid var(--main-red); outline-offset: 3px; }
 .player-sound-settings { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0 0 24px; padding: 12px 16px; border: 1px solid rgba(128,128,128,.3); border-radius: 10px; }
 .player-sound-settings[hidden] { display: none; }
 .player-sound-settings label { font-size: .85rem; font-weight: 600; }

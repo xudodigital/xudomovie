@@ -18,6 +18,7 @@ const IMG_POSTER = 'https://image.tmdb.org/t/p/w500';
 const IMG_THUMB  = 'https://image.tmdb.org/t/p/w92';
 const IMG_STILL  = 'https://image.tmdb.org/t/p/w300';
 const CURRENT_LANG = localStorage.getItem('xudo_lang') || 'en-US';
+const CATALOG = window.XUDO_CATALOG;
 
 const TRANSLATIONS = window.XUDO_I18N.TRANSLATIONS; // moved to js/i18n/translations.js (single source of truth)
 
@@ -439,12 +440,12 @@ async function fetchLiveSearch(query) {
         const personItems = [];
         results.forEach(i => {
             if (i.media_type === 'movie' || i.media_type === 'tv') {
-                if (i.poster_path && !seenIds.has(i.id)) { mediaItems.push(i); seenIds.add(i.id); }
+                if (i.poster_path && CATALOG.isEligible(i) && !seenIds.has(i.id)) { mediaItems.push(i); seenIds.add(i.id); }
             } else if (i.media_type === 'person') {
                 if (i.profile_path) personItems.push(i);
                 if (i.known_for) {
                     i.known_for.forEach(media => {
-                        if ((media.media_type === 'movie' || media.media_type === 'tv') && media.poster_path && !seenIds.has(media.id)) {
+                        if ((media.media_type === 'movie' || media.media_type === 'tv') && media.poster_path && CATALOG.isEligible(media) && !seenIds.has(media.id)) {
                             mediaItems.push(media);
                             seenIds.add(media.id);
                         }
@@ -541,12 +542,12 @@ async function performSearch(q, append = false) {
         const mediaItems = [], personItems = [];
         (d.results || []).forEach(i => {
             if (i.media_type === 'movie' || i.media_type === 'tv') {
-                if (i.poster_path && !seenIds.has(i.id)) { mediaItems.push(i); seenIds.add(i.id); }
+                if (i.poster_path && CATALOG.isEligible(i) && !seenIds.has(i.id)) { mediaItems.push(i); seenIds.add(i.id); }
             } else if (i.media_type === 'person') {
                 if (i.profile_path) personItems.push(i);
                 if (i.known_for) {
                     i.known_for.forEach(media => {
-                        if ((media.media_type === 'movie' || media.media_type === 'tv') && media.poster_path && !seenIds.has(media.id)) {
+                        if ((media.media_type === 'movie' || media.media_type === 'tv') && media.poster_path && CATALOG.isEligible(media) && !seenIds.has(media.id)) {
                             mediaItems.push(media);
                             seenIds.add(media.id);
                         }
@@ -628,7 +629,7 @@ async function fetchPersonCreditsForSearch(personId, seenIds) {
         const credits = (data.cast || []).filter(i => {
             if (seenIds.has(i.id)) return false;
             if (i.media_type !== 'movie' && i.media_type !== 'tv') return false;
-            if (!i.poster_path) return false;
+            if (!i.poster_path || !CATALOG.isEligible(i)) return false;
             seenIds.add(i.id);
             return true;
         });
@@ -639,7 +640,7 @@ async function fetchPersonCreditsForSearch(personId, seenIds) {
 function renderSearchGrid(items) {
     const grid = document.getElementById('search-grid');
     if (!grid) return;
-    let sorted = [...items];
+    let sorted = CATALOG.filter(items);
     switch (searchSortBy) {
         case 'popular': sorted.sort((a, b) => (b.popularity || 0) - (a.popularity || 0)); break;
         case 'newest' : sorted.sort((a, b) => (b.release_date || b.first_air_date || '0') < (a.release_date || a.first_air_date || '0') ? 1 : -1); break;
@@ -665,6 +666,7 @@ function renderSkeletons(id, count) {
 }
 
 function createCardHTML(item, typeOverride) {
+    if (!CATALOG.isEligible(item, typeOverride)) return '';
     const t           = item.media_type || typeOverride || (item.title ? 'movie' : 'tv');
     const title       = sanitizeHTML(item.title || item.name);
     const releaseDate = item.release_date || item.first_air_date;
@@ -835,7 +837,7 @@ async function loadHeroSlider() {
         const res = await fetch(`${BASE_URL}/trending/all/day?language=${CURRENT_LANG}`);
         if (!res.ok) throw new Error('Trending fetch failed');
         const data   = await res.json();
-        const slides = data.results.filter(i => i.media_type === 'movie' || i.media_type === 'tv').slice(0, 10);
+        const slides = CATALOG.filter(data.results).slice(0, 10);
 
         const container = document.getElementById('hero-slider');
         const dots      = document.getElementById('hero-dots');
@@ -852,7 +854,8 @@ async function loadHeroSlider() {
         const enriched = slides.map((item, idx) => ({
             ...item,
             _d: detailResults[idx].status === 'fulfilled' ? detailResults[idx].value : {}
-        }));
+        })).filter(i => CATALOG.isEligible({ ...i, ...i._d }, i.media_type));
+        if (!enriched.length) return;
 
         const buildSlide = i => {
             const d        = i._d;
@@ -904,14 +907,14 @@ async function loadHeroSlider() {
         container.innerHTML = [enriched[enriched.length - 1], ...enriched, enriched[0]].map(buildSlide).join('');
 
         if (dots) {
-            dots.innerHTML = slides.map((_, i) => `<div class="dot ${i === 0 ? 'active' : ''}" data-index="${i}"></div>`).join('');
+            dots.innerHTML = enriched.map((_, i) => `<div class="dot ${i === 0 ? 'active' : ''}" data-index="${i}"></div>`).join('');
             dots.querySelectorAll('.dot').forEach(d =>
                 d.addEventListener('click', (e) => { e.stopPropagation(); snapTo(parseInt(d.dataset.index) + 1, true); })
             );
         }
 
         let idx = 1, busy = false, timer;
-        const totalReal  = slides.length;
+        const totalReal  = enriched.length;
         const wrapper    = document.getElementById('hero-wrapper') || container;
         const sliderWidth = () => container.parentElement.offsetWidth || window.innerWidth;
 
@@ -1067,33 +1070,58 @@ async function loadHeroSlider() {
     }
 }
 
-function loadContinueWatching() {
+const savedCatalogDetails = new Map();
+
+async function hydrateSavedCatalogItems(entries) {
+    if (!Array.isArray(entries)) return [];
+    const results = new Array(entries.length);
+    let next = 0;
+    async function worker() {
+        while (next < entries.length) {
+            const index = next++, entry = entries[index];
+            if (!entry || !['movie', 'tv'].includes(entry.type) || !/^\d+$/.test(String(entry.id))) continue;
+            const key = `${entry.type}:${entry.id}`;
+            if (!savedCatalogDetails.has(key)) savedCatalogDetails.set(key, (async () => {
+                try {
+                    const response = await fetch(`${BASE_URL}/${entry.type}/${entry.id}?language=${CURRENT_LANG}`);
+                    if (!response.ok) return null;
+                    const data = await response.json();
+                    return String(data.id) === String(entry.id) ? data : null;
+                } catch (_) { return null; }
+            })());
+            const data = await savedCatalogDetails.get(key);
+            if (!data) continue;
+            const item = { ...data, media_type: entry.type, season: entry.season, episode: entry.episode,
+                server: entry.server, progress: entry.progress };
+            if (CATALOG.isEligible(item)) results[index] = item;
+        }
+    }
+    await Promise.all(Array.from({ length: Math.min(4, entries.length) }, worker));
+    return results.filter(Boolean);
+}
+
+async function loadContinueWatching() {
     const history = readWatchHistory().filter(item => !item.progress?.completed);
-    if (!history.length) return;
-    const main    = document.getElementById('main-content');
+    const items = await hydrateSavedCatalogItems(history);
+    const main = document.getElementById('main-content');
+    if (!main || !items.length) return;
     const section = document.createElement('section');
-    section.id        = 'continue-watching-section';
+    section.id = 'continue-watching-section';
     section.className = 'content-section';
     section.innerHTML = `
         <div class="section-header">
             <h2 class="section-heading">${TEXTS.contWatch}</h2>
             <a href="javascript:void(0)" onclick="clearHistory()" class="section-more-link">${TEXTS.clearHistory}</a>
         </div>
-        <div class="horizontal-slider">
-            ${history.map(i => createCardHTML({
-                id: i.id, media_type: i.type, title: i.title,
-                poster_path: i.poster, release_date: i.year,
-                vote_average: +i.rating, season: i.season, episode: i.episode, server: i.server, progress: i.progress
-            })).join('')}
-        </div>`;
+        <div class="horizontal-slider">${items.map(i => createCardHTML(i)).join('')}</div>`;
     main.prepend(section);
     attachCardDelegation('#continue-watching-section .horizontal-slider');
 }
 
 async function fetchMixedCountrySection(s, today) {
     const [movieSettled, tvSettled] = await Promise.allSettled([
-        fetch(`${BASE_URL}/discover/movie?${s.mixedCountry}&sort_by=primary_release_date.desc&primary_release_date.lte=${today}&language=${CURRENT_LANG}`),
-        fetch(`${BASE_URL}/discover/tv?${s.mixedCountry}&sort_by=first_air_date.desc&first_air_date.lte=${today}&language=${CURRENT_LANG}`),
+        fetch(`${BASE_URL}${CATALOG.discoverEndpoint(`/discover/movie?${s.mixedCountry}&sort_by=primary_release_date.desc`, 'movie', today)}&language=${CURRENT_LANG}`),
+        fetch(`${BASE_URL}${CATALOG.discoverEndpoint(`/discover/tv?${s.mixedCountry}&sort_by=first_air_date.desc`, 'tv', today)}&language=${CURRENT_LANG}`),
     ]);
 
     let items = [];
@@ -1101,14 +1129,14 @@ async function fetchMixedCountrySection(s, today) {
     if (movieSettled.status === 'fulfilled' && movieSettled.value.ok) {
         const d = await movieSettled.value.json();
         (d.results || []).forEach(r => {
-            if (r.poster_path && r.release_date && r.release_date <= today)
+            if (r.poster_path && CATALOG.isEligible(r, 'movie', today))
                 items.push({ ...r, media_type: 'movie', _sortDate: r.release_date });
         });
     }
     if (tvSettled.status === 'fulfilled' && tvSettled.value.ok) {
         const d = await tvSettled.value.json();
         (d.results || []).forEach(r => {
-            if (r.poster_path && r.first_air_date && r.first_air_date <= today)
+            if (r.poster_path && CATALOG.isEligible(r, 'tv', today))
                 items.push({ ...r, media_type: 'tv', _sortDate: r.first_air_date });
         });
     }
@@ -1122,7 +1150,7 @@ async function fetchMixedCountrySection(s, today) {
 
 async function loadAllSections() {
     const main = document.getElementById('main-content');
-    const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD", computed at call time
+    const today = CATALOG.today(); // "YYYY-MM-DD", computed at call time
     const sections = [
         { t: TEXTS.movPopular,       tk: 'movPopular',       u: `/discover/movie?sort_by=primary_release_date.desc&primary_release_date.lte=${today}&vote_count.gte=50&with_release_type=3%7C2`, k: 'movie', secId: 'sec-latest',    postFilter: r => !!r.poster_path },
         { t: TEXTS.latestTvSection,  tk: 'latestTvSection',  u: `/discover/tv?sort_by=first_air_date.desc&first_air_date.lte=${today}&vote_count.gte=50`,                                       k: 'tv',    secId: 'sec-latest-tv', postFilter: r => !!r.poster_path },
@@ -1137,7 +1165,8 @@ async function loadAllSections() {
         { t: TEXTS.korean,           tk: 'korean',           u: '/discover/tv?with_origin_country=KR&sort_by=popularity.desc',                                                                 k: 'tv',    secId: 'sec-korean',    mixedCountry: 'with_origin_country=KR' },
     ];
 
-    const promises = sections.map(async (s) => {
+    const promises = sections.map(async (source) => {
+        const s = { ...source, u: CATALOG.discoverEndpoint(source.u, source.k, today) };
         if (s.mixedCountry) return fetchMixedCountrySection(s, today);
         const sep = s.u.includes('?') ? '&' : '?';
         const res = await fetch(`${BASE_URL}${s.u}${sep}language=${CURRENT_LANG}`);
@@ -1150,7 +1179,8 @@ async function loadAllSections() {
     settled.forEach((result, i) => {
         if (result.status === 'rejected') { console.error(`Section error: ${sections[i].t}`, result.reason); return; }
         const { t, tk, u, k, results, postFilter, secId } = result.value;
-        const items = postFilter ? results.filter(postFilter) : results;
+        const eligible = CATALOG.filter(results, k, today);
+        const items = postFilter ? eligible.filter(postFilter) : eligible;
         if (!items.length) return;
         const link    = `browse.html?endpoint=${encodeURIComponent(u)}&titleKey=${encodeURIComponent(tk || '')}&title=${encodeURIComponent(t)}&type=${k}&lang=${CURRENT_LANG}`;
         const section = document.createElement('section');
@@ -1183,8 +1213,9 @@ async function initBrowse() {
         document.getElementById('genre-list').style.display = 'none';
         document.getElementById('load-more-btn').style.display = 'none';
         const favs = JSON.parse(localStorage.getItem('xudo_favs')) || [];
-        document.getElementById('browse-grid').innerHTML = favs.length
-            ? favs.map(f => createCardHTML({ id: f.id, media_type: f.type, title: f.title, poster_path: f.poster, release_date: f.year, vote_average: parseFloat(f.rating) })).join('')
+        const items = await hydrateSavedCatalogItems(favs);
+        document.getElementById('browse-grid').innerHTML = items.length
+            ? items.map(i => createCardHTML(i)).join('')
             : `<div class="no-results">${TEXTS.noFavorites}</div>`;
         attachCardDelegation('#browse-grid');
         return;
@@ -1195,8 +1226,9 @@ async function initBrowse() {
         document.getElementById('genre-list').style.display = 'none';
         document.getElementById('load-more-btn').style.display = 'none';
         const wl = JSON.parse(localStorage.getItem('xudo_watch_later')) || [];
-        document.getElementById('browse-grid').innerHTML = wl.length
-            ? wl.map(f => createCardHTML({ id: f.id, media_type: f.type, title: f.title, poster_path: f.poster, release_date: f.year, vote_average: parseFloat(f.rating) })).join('')
+        const items = await hydrateSavedCatalogItems(wl);
+        document.getElementById('browse-grid').innerHTML = items.length
+            ? items.map(i => createCardHTML(i)).join('')
             : `<div class="no-results">${TEXTS.noWatchLater}</div>`;
         attachCardDelegation('#browse-grid');
         return;
@@ -1244,7 +1276,7 @@ async function initBrowse() {
 // Normalise a browse endpoint: swap popularity sort → date-based sort + date.lte guard.
 // Leaves endpoints that already have a non-popularity sort (e.g. platform sections) untouched.
 function _normBrowseEp(ep, mediaType) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = CATALOG.today();
     const qIdx  = ep.indexOf('?');
     const path  = qIdx >= 0 ? ep.slice(0, qIdx) : ep;
     const sp    = new URLSearchParams(qIdx >= 0 ? ep.slice(qIdx + 1) : '');
@@ -1258,7 +1290,7 @@ function _normBrowseEp(ep, mediaType) {
         }
     }
     if (!sp.has('vote_count.gte')) sp.set('vote_count.gte', '20');
-    return `${path}?${sp.toString()}`;
+    return CATALOG.discoverEndpoint(`${path}?${sp.toString()}`, mediaType, today);
 }
 
 function _updateToggleIndicator() {
@@ -1322,6 +1354,7 @@ async function loadBrowseContent() {
     btn.innerText = TEXTS.loading;
     btn.disabled  = true;
     try {
+        currentBrowseEndpoint = CATALOG.discoverEndpoint(currentBrowseEndpoint, currentMediaType);
         const sep = currentBrowseEndpoint.includes('?') ? '&' : '?';
         const res = await fetch(`${BASE_URL}${currentBrowseEndpoint}${sep}language=${CURRENT_LANG}&page=${currentPage}`);
         if (!res.ok) throw new Error('Browse content fetch failed');
@@ -1329,7 +1362,7 @@ async function loadBrowseContent() {
 
         if (currentPage === 1) document.getElementById('browse-grid').innerHTML = '';
         document.getElementById('browse-grid').insertAdjacentHTML('beforeend',
-            d.results.filter(i => i.poster_path).map(i => createCardHTML(i, currentMediaType)).join('')
+            CATALOG.filter(d.results, currentMediaType).filter(i => i.poster_path).map(i => createCardHTML(i, currentMediaType)).join('')
         );
 
         currentPage++;
@@ -1431,7 +1464,7 @@ window.applyAdvancedFilters = async function () {
     if (currentGenreId) params += `&with_genres=${currentGenreId}`;
     if (year)    params += `&${currentMediaType === 'movie' ? 'primary_release_year' : 'first_air_date_year'}=${year}`;
     if (country) params += `&with_origin_country=${country}`;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = CATALOG.today();
     params += currentMediaType === 'movie' ? `&primary_release_date.lte=${today}` : `&first_air_date.lte=${today}`;
 
     currentBrowseEndpoint = `/discover/${currentMediaType}${params}`;
@@ -1509,6 +1542,9 @@ async function initWatchPage() {
     if (!id || !type) return (window.location.href = 'index.html');
     window.addEventListener('message', onPlayerProgress);
     document.getElementById('restart-playback')?.addEventListener('click', restartPlayback);
+    document.getElementById('stream-availability-retry')?.addEventListener('click', () => {
+        refreshStreamAvailability({ type, id, season: currentSeason, episode: currentEpisode }, true);
+    });
     initVidSrcSoundPreference();
 
     // Every provider uses TMDB IDs, including anime on Server 2.
@@ -1610,6 +1646,41 @@ function restartPlayback() {
     updatePlayer(type, id);
 }
 
+let streamAvailabilityRequest = 0, streamAvailabilityAbort = null;
+
+async function refreshStreamAvailability(content, force = false) {
+    const request = ++streamAvailabilityRequest;
+    streamAvailabilityAbort?.abort();
+    streamAvailabilityAbort = null;
+    const panel = document.getElementById('stream-availability');
+    if (!panel) return;
+    panel.hidden = currentServer !== 1;
+    if (panel.hidden) return;
+    document.getElementById('stream-availability-title').textContent = TEXTS.streamAvailability;
+    document.getElementById('stream-availability-context').textContent = content.type === 'tv'
+        ? TEXTS.streamEpisode.replace('{season}', content.season).replace('{episode}', content.episode) : '';
+    document.getElementById('stream-availability-note').textContent = TEXTS.streamAvailabilityNote;
+    const status = document.getElementById('stream-availability-status');
+    const retry = document.getElementById('stream-availability-retry');
+    retry.textContent = TEXTS.streamRetry;
+    retry.disabled = true;
+    panel.dataset.state = 'checking';
+    status.textContent = TEXTS.streamChecking;
+    streamAvailabilityAbort = new AbortController();
+    let result;
+    try {
+        result = await window.XUDO_STREAM_AVAILABILITY.check(content, { force, signal: streamAvailabilityAbort.signal });
+    } catch (_) { result = { state: 'unknown' }; }
+    // A late response must never label a different episode or another server.
+    if (request !== streamAvailabilityRequest || currentServer !== 1) return;
+    const state = ['available', 'unavailable'].includes(result?.state) ? result.state : 'unknown';
+    panel.dataset.state = state;
+    status.textContent = state === 'available'
+        ? TEXTS.streamAvailable + (result.quality ? ` · ${result.quality}` : '')
+        : state === 'unavailable' ? TEXTS.streamUnavailable : TEXTS.streamUnknown;
+    retry.disabled = false;
+}
+
 function updatePlayer(type, id) {
     const el = document.getElementById('player-container');
     if (!el) return;
@@ -1628,6 +1699,7 @@ function updatePlayer(type, id) {
     }
     window.history?.replaceState(null, '', `${window.location.pathname || 'watch.html'}?${params}`);
     const content = { type, id, season: currentSeason, episode: currentEpisode };
+    refreshStreamAvailability(content);
     let src = '';
     if (type === 'movie') {
         switch (currentServer) {
@@ -1889,12 +1961,13 @@ async function fetchSimilarMovies(type, id) {
         const res = await fetch(`${BASE_URL}/${type}/${id}/recommendations?language=${CURRENT_LANG}`);
         if (!res.ok) throw new Error('Recommendations failed');
         const d = await res.json();
-        if (d.results.length) {
-            document.getElementById('rec-slider').innerHTML = d.results.map(i => createCardHTML(i, type)).join('');
+        const eligible = CATALOG.filter(d.results, type);
+        if (eligible.length) {
+            document.getElementById('rec-slider').innerHTML = eligible.map(i => createCardHTML(i, type)).join('');
         } else {
             const fallback = await fetch(`${BASE_URL}/${type}/${id}/similar?language=${CURRENT_LANG}`);
             const fd       = await fallback.json();
-            document.getElementById('rec-slider').innerHTML = fd.results?.length ? fd.results.map(i => createCardHTML(i, type)).join('') : '';
+            document.getElementById('rec-slider').innerHTML = CATALOG.filter(fd.results, type).map(i => createCardHTML(i, type)).join('');
         }
         attachCardDelegation('#rec-slider');
     } catch (error) { console.error('Similar content error:', error); }
@@ -2028,7 +2101,7 @@ async function initPersonPage() {
         const seen        = new Set();
         const creditDate  = i => i.release_date || i.first_air_date || '';
         const allCredits  = (credits.cast || []).filter(i => {
-            if ((i.media_type !== 'movie' && i.media_type !== 'tv') || !i.poster_path) return false;
+            if (!CATALOG.isEligible(i) || !i.poster_path) return false;
             const key = `${i.media_type}:${i.id}`;
             if (seen.has(key)) return false;
             seen.add(key);
@@ -2059,6 +2132,7 @@ function renderPersonCredits(credits) {
     const btn  = document.getElementById('filmography-load-more');
     if (!grid) return;
 
+    credits = CATALOG.filter(credits);
     grid._list  = credits;
     grid._shown = 0;
 

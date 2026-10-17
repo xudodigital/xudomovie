@@ -9,6 +9,14 @@ window.XUDO_I18N = {
     // Main UI strings (used by js/main.js as TRANSLATIONS[lang])
     TRANSLATIONS: {
     'en-US': {
+        streamAvailability: "Stream · Server 1",
+        streamChecking: "Checking availability…",
+        streamAvailable: "Listed as available",
+        streamUnavailable: "Not listed. Try another server.",
+        streamUnknown: "Availability could not be checked.",
+        streamAvailabilityNote: "Availability is based on the provider’s catalogue; playback may still fail.",
+        streamRetry: "Check again",
+        streamEpisode: "Season {season} · Episode {episode}",
         soundPreference: "Sound at start · Server 1",
         soundAuto: "Follow player",
         soundOn: "Prefer sound on",
@@ -90,6 +98,14 @@ window.XUDO_I18N = {
 
     },
     'id-ID': {
+        streamAvailability: "Stream · Server 1",
+        streamChecking: "Memeriksa ketersediaan…",
+        streamAvailable: "Tercatat tersedia",
+        streamUnavailable: "Tidak tersedia. Coba server lain.",
+        streamUnknown: "Ketersediaan belum dapat diperiksa.",
+        streamAvailabilityNote: "Status berdasarkan katalog penyedia; pemutaran masih bisa mengalami kendala.",
+        streamRetry: "Periksa lagi",
+        streamEpisode: "Musim {season} · Episode {episode}",
         soundPreference: "Suara saat mulai · Server 1",
         soundAuto: "Ikuti pemutar",
         soundOn: "Utamakan suara aktif",
@@ -171,6 +187,14 @@ window.XUDO_I18N = {
 
     },
     'bn-BD': {
+        streamAvailability: "স্ট্রিম · Server 1",
+        streamChecking: "উপলব্ধতা যাচাই করা হচ্ছে…",
+        streamAvailable: "তালিকায় উপলব্ধ",
+        streamUnavailable: "উপলব্ধ নেই। অন্য সার্ভার চেষ্টা করুন।",
+        streamUnknown: "উপলব্ধতা যাচাই করা যায়নি।",
+        streamAvailabilityNote: "অবস্থা সরবরাহকারীর তালিকা অনুযায়ী; তবুও ভিডিও চালাতে সমস্যা হতে পারে।",
+        streamRetry: "আবার যাচাই করুন",
+        streamEpisode: "সিজন {season} · পর্ব {episode}",
         soundPreference: "শুরুর শব্দ · সার্ভার ১",
         soundAuto: "প্লেয়ার অনুসরণ করুন",
         soundOn: "শব্দ চালু রাখার চেষ্টা করুন",
@@ -252,6 +276,14 @@ window.XUDO_I18N = {
 
     },
     'vi-VN': {
+        streamAvailability: "Luồng phát · Server 1",
+        streamChecking: "Đang kiểm tra…",
+        streamAvailable: "Có trong danh mục",
+        streamUnavailable: "Không có. Hãy thử máy chủ khác.",
+        streamUnknown: "Chưa thể kiểm tra tình trạng.",
+        streamAvailabilityNote: "Trạng thái dựa trên danh mục của nhà cung cấp; video vẫn có thể không phát được.",
+        streamRetry: "Kiểm tra lại",
+        streamEpisode: "Mùa {season} · Tập {episode}",
         soundPreference: "Âm thanh khi bắt đầu · Máy chủ 1",
         soundAuto: "Theo trình phát",
         soundOn: "Ưu tiên bật âm thanh",
@@ -333,6 +365,14 @@ window.XUDO_I18N = {
 
     },
     'km-KH': {
+        streamAvailability: "ការផ្សាយ · Server 1",
+        streamChecking: "កំពុងពិនិត្យភាពអាចរកបាន…",
+        streamAvailable: "មានក្នុងបញ្ជី",
+        streamUnavailable: "មិនមានទេ។ សាកល្បងម៉ាស៊ីនមេផ្សេង។",
+        streamUnknown: "មិនអាចពិនិត្យភាពអាចរកបាន។",
+        streamAvailabilityNote: "ស្ថានភាពផ្អែកលើបញ្ជីរបស់អ្នកផ្តល់សេវា។ ការចាក់អាចនៅតែមានបញ្ហា។",
+        streamRetry: "ពិនិត្យម្តងទៀត",
+        streamEpisode: "រដូវ {season} · ភាគ {episode}",
         soundPreference: "សំឡេងពេលចាប់ផ្តើម · ម៉ាស៊ីនមេ 1",
         soundAuto: "តាមកម្មវិធីចាក់",
         soundOn: "ព្យាយាមបើកសំឡេង",
@@ -414,6 +454,14 @@ window.XUDO_I18N = {
 
     },
     'th-TH': {
+        streamAvailability: "สตรีม · Server 1",
+        streamChecking: "กำลังตรวจสอบ…",
+        streamAvailable: "มีอยู่ในรายการ",
+        streamUnavailable: "ไม่มีให้บริการ ลองเซิร์ฟเวอร์อื่น",
+        streamUnknown: "ยังตรวจสอบความพร้อมไม่ได้",
+        streamAvailabilityNote: "สถานะอ้างอิงจากรายการของผู้ให้บริการ การเล่นวิดีโออาจยังขัดข้องได้",
+        streamRetry: "ตรวจสอบอีกครั้ง",
+        streamEpisode: "ซีซัน {season} · ตอน {episode}",
         soundPreference: "เสียงเมื่อเริ่ม · เซิร์ฟเวอร์ 1",
         soundAuto: "ตามเครื่องเล่น",
         soundOn: "พยายามเปิดเสียง",
@@ -495,6 +543,14 @@ window.XUDO_I18N = {
 
     },
     'ms-MY': {
+        streamAvailability: "Strim · Server 1",
+        streamChecking: "Menyemak ketersediaan…",
+        streamAvailable: "Tersenarai tersedia",
+        streamUnavailable: "Tidak tersedia. Cuba pelayan lain.",
+        streamUnknown: "Ketersediaan belum dapat disemak.",
+        streamAvailabilityNote: "Status berdasarkan katalog penyedia; main balik masih mungkin bermasalah.",
+        streamRetry: "Semak semula",
+        streamEpisode: "Musim {season} · Episod {episode}",
         soundPreference: "Bunyi semasa mula · Pelayan 1",
         soundAuto: "Ikut pemain",
         soundOn: "Utamakan bunyi aktif",
@@ -576,6 +632,14 @@ window.XUDO_I18N = {
 
     },
     'tl-PH': {
+        streamAvailability: "Stream · Server 1",
+        streamChecking: "Sinusuri ang availability…",
+        streamAvailable: "Nakalistang available",
+        streamUnavailable: "Hindi available. Subukan ang ibang server.",
+        streamUnknown: "Hindi masuri ang availability.",
+        streamAvailabilityNote: "Batay ang status sa katalogo ng provider; maaari pa ring magkaproblema sa pag-play.",
+        streamRetry: "Suriin muli",
+        streamEpisode: "Season {season} · Episode {episode}",
         soundPreference: "Tunog sa pagsisimula · Server 1",
         soundAuto: "Sundin ang player",
         soundOn: "Subukang may tunog",
@@ -657,6 +721,14 @@ window.XUDO_I18N = {
 
     },
     'hi-IN': {
+        streamAvailability: "स्ट्रीम · Server 1",
+        streamChecking: "उपलब्धता जाँची जा रही है…",
+        streamAvailable: "सूची में उपलब्ध",
+        streamUnavailable: "उपलब्ध नहीं। दूसरा सर्वर आज़माएँ।",
+        streamUnknown: "उपलब्धता की जाँच नहीं हो सकी।",
+        streamAvailabilityNote: "स्थिति प्रदाता की सूची पर आधारित है; वीडियो चलाने में फिर भी समस्या हो सकती है।",
+        streamRetry: "फिर जाँचें",
+        streamEpisode: "सीज़न {season} · एपिसोड {episode}",
         soundPreference: "शुरुआती आवाज़ · सर्वर 1",
         soundAuto: "प्लेयर के अनुसार",
         soundOn: "आवाज़ चालू करने को प्राथमिकता",
@@ -738,6 +810,14 @@ window.XUDO_I18N = {
 
     },
     'zh-CN': {
+        streamAvailability: "播放源 · Server 1",
+        streamChecking: "正在检查可用性…",
+        streamAvailable: "已列为可用",
+        streamUnavailable: "暂不可用，请尝试其他服务器。",
+        streamUnknown: "暂时无法检查可用性。",
+        streamAvailabilityNote: "状态基于提供方目录，实际播放仍可能失败。",
+        streamRetry: "重新检查",
+        streamEpisode: "第 {season} 季 · 第 {episode} 集",
         soundPreference: "开始时的声音 · 服务器 1",
         soundAuto: "跟随播放器",
         soundOn: "优先开启声音",
@@ -819,6 +899,14 @@ window.XUDO_I18N = {
 
     },
     'zh-TW': {
+        streamAvailability: "播放來源 · Server 1",
+        streamChecking: "正在檢查可用性…",
+        streamAvailable: "已列為可用",
+        streamUnavailable: "暫不可用，請嘗試其他伺服器。",
+        streamUnknown: "暫時無法檢查可用性。",
+        streamAvailabilityNote: "狀態依據提供方目錄，實際播放仍可能失敗。",
+        streamRetry: "重新檢查",
+        streamEpisode: "第 {season} 季 · 第 {episode} 集",
         soundPreference: "開始時的聲音 · 伺服器 1",
         soundAuto: "跟隨播放器",
         soundOn: "優先開啟聲音",
@@ -900,6 +988,14 @@ window.XUDO_I18N = {
 
     },
     'ja-JP': {
+        streamAvailability: "配信 · Server 1",
+        streamChecking: "配信状況を確認中…",
+        streamAvailable: "配信リストにあります",
+        streamUnavailable: "配信リストにありません。他のサーバーをお試しください。",
+        streamUnknown: "配信状況を確認できませんでした。",
+        streamAvailabilityNote: "提供元の配信リストに基づく情報です。再生に失敗する場合があります。",
+        streamRetry: "再確認",
+        streamEpisode: "シーズン {season} · エピソード {episode}",
         soundPreference: "開始時の音声 · サーバー1",
         soundAuto: "プレーヤーに従う",
         soundOn: "音声オンを優先",
@@ -981,6 +1077,14 @@ window.XUDO_I18N = {
 
     },
     'ko-KR': {
+        streamAvailability: "스트림 · Server 1",
+        streamChecking: "제공 여부 확인 중…",
+        streamAvailable: "제공 목록에 있음",
+        streamUnavailable: "제공되지 않습니다. 다른 서버를 이용해 보세요.",
+        streamUnknown: "제공 여부를 확인할 수 없습니다.",
+        streamAvailabilityNote: "제공업체 목록을 기준으로 한 상태이며, 실제 재생은 실패할 수 있습니다.",
+        streamRetry: "다시 확인",
+        streamEpisode: "시즌 {season} · 에피소드 {episode}",
         soundPreference: "시작 시 소리 · 서버 1",
         soundAuto: "플레이어 설정 따르기",
         soundOn: "소리 켜기 우선",
@@ -1062,6 +1166,14 @@ window.XUDO_I18N = {
 
     },
     'ar-SA': {
+        streamAvailability: "البث · Server 1",
+        streamChecking: "جارٍ التحقق من التوفر…",
+        streamAvailable: "مُدرج كمتاح",
+        streamUnavailable: "غير متاح. جرّب خادماً آخر.",
+        streamUnknown: "تعذّر التحقق من التوفر.",
+        streamAvailabilityNote: "الحالة مبنية على قائمة المزوّد؛ قد يتعذّر التشغيل رغم ذلك.",
+        streamRetry: "تحقق مجدداً",
+        streamEpisode: "الموسم {season} · الحلقة {episode}",
         soundPreference: "الصوت عند البدء · الخادم 1",
         soundAuto: "اتباع المشغّل",
         soundOn: "تفضيل تشغيل الصوت",
@@ -1143,6 +1255,14 @@ window.XUDO_I18N = {
 
     },
     'pt-BR': {
+        streamAvailability: "Transmissão · Server 1",
+        streamChecking: "Verificando disponibilidade…",
+        streamAvailable: "Listado como disponível",
+        streamUnavailable: "Indisponível. Tente outro servidor.",
+        streamUnknown: "Não foi possível verificar a disponibilidade.",
+        streamAvailabilityNote: "O status é baseado no catálogo do provedor; a reprodução ainda pode falhar.",
+        streamRetry: "Verificar novamente",
+        streamEpisode: "Temporada {season} · Episódio {episode}",
         soundPreference: "Áudio ao iniciar · Servidor 1",
         soundAuto: "Seguir o player",
         soundOn: "Preferir som ativado",
@@ -1224,6 +1344,14 @@ window.XUDO_I18N = {
 
     },
     'es-ES': {
+        streamAvailability: "Stream · Server 1",
+        streamChecking: "Comprobando disponibilidad…",
+        streamAvailable: "Figura como disponible",
+        streamUnavailable: "No disponible. Prueba otro servidor.",
+        streamUnknown: "No se pudo comprobar la disponibilidad.",
+        streamAvailabilityNote: "El estado se basa en el catálogo del proveedor; la reproducción puede fallar.",
+        streamRetry: "Comprobar de nuevo",
+        streamEpisode: "Temporada {season} · Episodio {episode}",
         soundPreference: "Sonido al iniciar · Servidor 1",
         soundAuto: "Seguir el reproductor",
         soundOn: "Preferir sonido activado",
@@ -1305,6 +1433,14 @@ window.XUDO_I18N = {
 
     },
     'fr-FR': {
+        streamAvailability: "Flux · Server 1",
+        streamChecking: "Vérification de la disponibilité…",
+        streamAvailable: "Répertorié comme disponible",
+        streamUnavailable: "Indisponible. Essayez un autre serveur.",
+        streamUnknown: "Impossible de vérifier la disponibilité.",
+        streamAvailabilityNote: "Le statut repose sur le catalogue du fournisseur ; la lecture peut encore échouer.",
+        streamRetry: "Vérifier à nouveau",
+        streamEpisode: "Saison {season} · Épisode {episode}",
         soundPreference: "Son au démarrage · Serveur 1",
         soundAuto: "Suivre le lecteur",
         soundOn: "Préférer le son activé",
@@ -1386,6 +1522,14 @@ window.XUDO_I18N = {
 
     },
     'tr-TR': {
+        streamAvailability: "Yayın · Server 1",
+        streamChecking: "Kullanılabilirlik kontrol ediliyor…",
+        streamAvailable: "Listede mevcut",
+        streamUnavailable: "Mevcut değil. Başka bir sunucu deneyin.",
+        streamUnknown: "Kullanılabilirlik kontrol edilemedi.",
+        streamAvailabilityNote: "Durum sağlayıcının kataloğuna dayanır; oynatma yine de başarısız olabilir.",
+        streamRetry: "Tekrar kontrol et",
+        streamEpisode: "Sezon {season} · Bölüm {episode}",
         soundPreference: "Başlangıç sesi · Sunucu 1",
         soundAuto: "Oynatıcıyı takip et",
         soundOn: "Sesi açık tercih et",
@@ -1466,6 +1610,14 @@ window.XUDO_I18N = {
         typeTv          : 'Dizi',
     },
     'ru-RU': {
+        streamAvailability: "Поток · Server 1",
+        streamChecking: "Проверяем доступность…",
+        streamAvailable: "Есть в каталоге",
+        streamUnavailable: "Недоступно. Попробуйте другой сервер.",
+        streamUnknown: "Не удалось проверить доступность.",
+        streamAvailabilityNote: "Статус основан на каталоге провайдера; воспроизведение всё равно может не работать.",
+        streamRetry: "Проверить снова",
+        streamEpisode: "Сезон {season} · Серия {episode}",
         soundPreference: "Звук при запуске · Сервер 1",
         soundAuto: "Как в плеере",
         soundOn: "Предпочитать звук",

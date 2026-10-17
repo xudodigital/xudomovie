@@ -17,7 +17,7 @@
         <meta name="robots" content="noindex, nofollow">
         <link rel="canonical" href="https://xudomovie.us/">
         <link href="https://fonts.googleapis.com/css2?family=Saira:wght@300;400;600;700&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="css/style.css?v=26">
+        <link rel="stylesheet" href="css/style.css?v=27">
         <link rel="icon" href="icon.svg" type="image/svg+xml">
     </head>
     <body>
@@ -34,6 +34,17 @@
                     <button class="server-btn" data-server="5" aria-pressed="false" title="VidKing" onclick="changeServer(5)">5</button>
                     <button class="server-btn" data-server="6" aria-pressed="false" title="2Embed" onclick="changeServer(6)">6</button>
                 </div>
+            </div>
+            <div id="stream-availability" class="stream-availability" hidden>
+                <div class="stream-availability-heading">
+                    <strong id="stream-availability-title"></strong>
+                    <span id="stream-availability-context"></span>
+                </div>
+                <div class="stream-availability-result">
+                    <span id="stream-availability-status" role="status" aria-live="polite" aria-atomic="true"></span>
+                    <button id="stream-availability-retry" type="button" class="server-btn"></button>
+                </div>
+                <small id="stream-availability-note"></small>
             </div>
             <div id="player-sound-settings" class="player-sound-settings">
                 <label id="player-sound-label" for="player-sound-preference"></label>
@@ -123,11 +134,13 @@
             </svg>
         </button>
         <div id="global-footer-placeholder"></div>
-        <script src="js/i18n/translations.js?v=4"></script>
+        <script src="js/i18n/translations.js?v=5"></script>
         <script src="js/global-header.js"></script>
         <script src="js/global-footer.js"></script>
         <script src="js/player-progress.js?v=5"></script>
-        <script src="js/main.js?v=25"></script>
+        <script src="js/catalog-policy.js?v=1"></script>
+        <script src="js/stream-availability.js?v=1"></script>
+        <script src="js/main.js?v=27"></script>
         <script src="js/visitor-counter.js" defer></script>
         <div id="trailer-modal" class="trailer-modal">
             <div class="trailer-modal-content">
