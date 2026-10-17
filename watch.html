@@ -17,14 +17,14 @@
         <meta name="robots" content="noindex, nofollow">
         <link rel="canonical" href="https://xudomovie.us/">
         <link href="https://fonts.googleapis.com/css2?family=Saira:wght@300;400;600;700&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="css/style.css?v=27">
+        <link rel="stylesheet" href="css/style.css?v=28">
         <link rel="icon" href="icon.svg" type="image/svg+xml">
     </head>
     <body>
         <div id="global-header-placeholder"></div>
         <div class="player-wrapper" id="player-container"></div>
         <div class="watch-container">
-            <div class="control-bar" id="control-bar">
+            <div class="control-bar watch-controls" id="control-bar">
                 <div class="server-control" id="server-selector" role="group" aria-label="Video server">
                     <span class="server-label">Server:</span>
                     <button class="server-btn active" data-server="1" aria-pressed="true" title="VidSrc" onclick="changeServer(1)">1</button>
@@ -34,36 +34,36 @@
                     <button class="server-btn" data-server="5" aria-pressed="false" title="VidKing" onclick="changeServer(5)">5</button>
                     <button class="server-btn" data-server="6" aria-pressed="false" title="2Embed" onclick="changeServer(6)">6</button>
                 </div>
-            </div>
-            <div id="stream-availability" class="stream-availability" hidden>
-                <div class="stream-availability-heading">
-                    <strong id="stream-availability-title"></strong>
-                    <span id="stream-availability-context"></span>
+                <div class="watch-tools" id="watch-tools">
+                    <span id="stream-availability" class="stream-availability" hidden>
+                        <span id="stream-availability-status" role="status" aria-live="polite" aria-atomic="true"></span>
+                    </span>
+                    <details id="player-settings" class="player-settings">
+                        <summary>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m9 3-.7 2.1-2 .9-2.1-.4-2 3.5 1.4 1.7v2.4l-1.4 1.7 2 3.5 2.1-.4 2 .9L9 21h4l.7-2.1 2-.9 2.1.4 2-3.5-1.4-1.7v-2.4l1.4-1.7-2-3.5-2.1.4-2-.9L13 3Z"/><circle cx="11" cy="12" r="3"/></svg>
+                            <span id="player-settings-label"></span>
+                        </summary>
+                        <div class="player-settings-panel">
+                            <div id="player-sound-settings" class="player-sound-settings">
+                                <label id="player-sound-label" for="player-sound-preference"></label>
+                                <div class="player-sound-select">
+                                    <select id="player-sound-preference" aria-describedby="player-sound-note"></select>
+                                </div>
+                                <small id="player-sound-note"></small>
+                            </div>
+                            <button id="restart-playback" class="settings-action" type="button" hidden></button>
+                            <div id="stream-availability-details" class="stream-availability-details" hidden>
+                                <div class="stream-availability-heading">
+                                    <strong id="stream-availability-title"></strong>
+                                    <span id="stream-availability-context"></span>
+                                </div>
+                                <small id="stream-availability-note"></small>
+                                <button id="stream-availability-retry" type="button" class="settings-action"></button>
+                            </div>
+                            <small id="ublock-note-text" class="player-help"></small>
+                        </div>
+                    </details>
                 </div>
-                <div class="stream-availability-result">
-                    <span id="stream-availability-status" role="status" aria-live="polite" aria-atomic="true"></span>
-                    <button id="stream-availability-retry" type="button" class="server-btn"></button>
-                </div>
-                <small id="stream-availability-note"></small>
-            </div>
-            <div id="player-sound-settings" class="player-sound-settings">
-                <label id="player-sound-label" for="player-sound-preference"></label>
-                <div class="player-sound-select">
-                    <select id="player-sound-preference" aria-describedby="player-sound-note"></select>
-                </div>
-                <small id="player-sound-note"></small>
-            </div>
-            <div id="watch-progress" class="watch-progress" hidden>
-                <div class="watch-progress-heading">
-                    <span id="watch-progress-label"></span>
-                    <button id="restart-playback" class="server-btn" type="button"></button>
-                </div>
-                <progress id="watch-progress-meter" max="100" value="0"></progress>
-                <span id="watch-progress-time"></span>
-            </div>
-            <div id="ublock-note" style="display:flex;align-items:center;gap:10px;margin:10px 0 24px;padding:10px 14px;background:rgba(229,9,20,0.07);border:1px solid rgba(229,9,20,0.25);border-left:3px solid #e50914;border-radius:8px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="#e50914" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                <span id="ublock-note-text" style="font-size:0.78rem;color:#ccc;line-height:1.4;"></span>
             </div>
             <div class="tv-controls" id="tv-controls" style="display:none;">
                 <div class="tv-controls-header">
@@ -134,13 +134,13 @@
             </svg>
         </button>
         <div id="global-footer-placeholder"></div>
-        <script src="js/i18n/translations.js?v=5"></script>
+        <script src="js/i18n/translations.js?v=6"></script>
         <script src="js/global-header.js"></script>
         <script src="js/global-footer.js"></script>
         <script src="js/player-progress.js?v=5"></script>
         <script src="js/catalog-policy.js?v=1"></script>
         <script src="js/stream-availability.js?v=1"></script>
-        <script src="js/main.js?v=27"></script>
+        <script src="js/main.js?v=28"></script>
         <script src="js/visitor-counter.js" defer></script>
         <div id="trailer-modal" class="trailer-modal">
             <div class="trailer-modal-content">

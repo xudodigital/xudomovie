@@ -117,7 +117,7 @@ test('Status shows localized states, episode scope and retry without blocking if
     assert.equal(elements['stream-availability'].dataset.state, 'checking');
     assert.match(elements['stream-availability-context'].textContent, /Musim 1 · Episode 1/);
     pending[0].resolve({ state: 'available', quality: '1080p' }); await new Promise(setImmediate);
-    assert.equal(elements['stream-availability-status'].textContent, 'Tercatat tersedia · 1080p');
+    assert.equal(elements['stream-availability-status'].textContent, 'Tersedia · 1080p');
     assert.equal(elements['stream-availability-retry'].disabled, false);
     const missing = context.refreshStreamAvailability(episode, true);
     assert.equal(pending[1].options.force, true);

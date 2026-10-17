@@ -845,43 +845,53 @@ a {
 
 .card-watch-progress { margin-top: 8px; font-size: 0.72rem; color: var(--text-muted); }
 .card-watch-progress span { display: block; margin-top: 3px; }
-.watch-progress { margin: -10px 0 24px; padding: 16px; border: 1px solid rgba(128,128,128,0.3); border-radius: 10px; }
-.watch-progress[hidden] { display: none; }
-.stream-availability { margin: -8px 0 20px; padding: 14px 16px; border: 1px solid rgba(128,128,128,.35); border-radius: 10px; line-height: 1.5; }
-.stream-availability[hidden] { display: none; }
-.stream-availability-heading, .stream-availability-result { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; }
-.stream-availability-heading { margin-bottom: 6px; font-size: .85rem; }
-#stream-availability-context, .stream-availability small { color: var(--text-muted); }
-.stream-availability small { display: block; margin-top: 8px; font-size: .78rem; overflow-wrap: anywhere; }
-#stream-availability-status { flex: 1 1 180px; font-size: .9rem; }
-.stream-availability[data-state="available"] #stream-availability-status { color: #63cf99; }
-.stream-availability[data-state="unavailable"] #stream-availability-status { color: #f0b96c; }
-[data-theme="light"] .stream-availability[data-state="available"] #stream-availability-status { color: #176c3e; }
-[data-theme="light"] .stream-availability[data-state="unavailable"] #stream-availability-status { color: #885007; }
-#stream-availability-retry { min-height: 44px; white-space: normal; }
-#stream-availability-retry:disabled { opacity: .5; cursor: wait; }
-#stream-availability-retry:focus-visible { outline: 2px solid var(--main-red); outline-offset: 3px; }
-.player-sound-settings { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0 0 24px; padding: 12px 16px; border: 1px solid rgba(128,128,128,.3); border-radius: 10px; }
-.player-sound-settings[hidden] { display: none; }
+.watch-controls { padding-bottom: 18px; border-bottom: 1px solid rgba(128,128,128,.18); }
+.watch-controls #server-selector { flex-wrap: nowrap; gap: 6px; }
+.watch-controls #server-selector .server-btn { min-width: 44px; min-height: 44px; padding: 6px 12px; }
+.watch-tools { display: flex; align-items: center; justify-content: flex-end; gap: 18px; margin-inline-start: auto; min-width: 0; }
+.watch-tools[hidden] { display: none; }
+.stream-availability { display: inline-flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: .8rem; line-height: 1.5; }
+.stream-availability[hidden], .stream-availability-details[hidden], .player-sound-settings[hidden], .settings-action[hidden] { display: none; }
+.stream-availability::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.stream-availability[data-state="available"] { color: #76bc96; }
+.stream-availability[data-state="unavailable"], .stream-availability[data-state="unknown"] { color: #e8b873; }
+[data-theme="light"] .stream-availability[data-state="available"] { color: #176c3e; }
+[data-theme="light"] .stream-availability[data-state="unavailable"], [data-theme="light"] .stream-availability[data-state="unknown"] { color: #885007; }
+.player-settings { position: relative; flex-shrink: 0; }
+.player-settings summary { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 0 8px 8px; cursor: pointer; list-style: none; font-size: .85rem; color: var(--text-muted); }
+.player-settings summary::-webkit-details-marker { display: none; }
+.player-settings summary:hover, .player-settings[open] summary { color: var(--text-white); }
+.player-settings summary:focus-visible, .settings-action:focus-visible { outline: 2px solid var(--main-red); outline-offset: 4px; border-radius: 4px; }
+.player-settings-panel { position: absolute; top: calc(100% + 8px); inset-inline-end: 0; width: min(360px, calc(100vw - 32px)); padding: 20px; background: var(--bg-main); border: 1px solid rgba(128,128,128,.3); border-radius: 12px; box-shadow: 0 16px 48px rgba(0,0,0,.35); z-index: 2101; max-height: min(460px, calc(100svh - 180px)); overflow-y: auto; line-height: 1.5; }
+.player-sound-settings { display: flex; flex-direction: column; gap: 10px; }
 .player-sound-settings label { font-size: .85rem; font-weight: 600; }
-.player-sound-select { position: relative; max-width: 100%; }
+.player-sound-select { position: relative; width: 100%; }
 .player-sound-select::after { content: ''; position: absolute; inset-inline-end: 16px; top: 50%; width: 7px; height: 7px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-70%) rotate(45deg); pointer-events: none; }
-.player-sound-settings select { appearance: none; -webkit-appearance: none; width: 100%; max-width: 100%; padding-block: 8px; padding-inline-start: 12px; padding-inline-end: 40px; border: 1px solid rgba(128,128,128,.5); border-radius: 8px; background: var(--bg-main); color: var(--text-white); font: inherit; font-size: .85rem; }
-.player-sound-settings select:focus-visible { outline: 2px solid #e50914; outline-offset: 2px; }
-.player-sound-settings small { flex-basis: 100%; color: var(--text-muted); line-height: 1.5; }
+.player-sound-settings select { appearance: none; -webkit-appearance: none; width: 100%; max-width: 100%; min-height: 44px; padding-block: 8px; padding-inline-start: 12px; padding-inline-end: 40px; border: 1px solid rgba(128,128,128,.5); border-radius: 8px; background: var(--bg-main); color: var(--text-white); font: inherit; font-size: .85rem; }
+.player-sound-settings select:focus-visible { outline: 2px solid var(--main-red); outline-offset: 2px; }
+.player-settings-panel small { display: block; color: var(--text-muted); font-size: .76rem; overflow-wrap: anywhere; }
+.settings-action { display: block; min-height: 44px; padding: 10px 0; border: 0; background: none; color: var(--text-white); font: inherit; font-size: .85rem; text-align: start; cursor: pointer; }
+.settings-action:hover { text-decoration: underline; }
+.settings-action:disabled { opacity: .5; cursor: wait; }
+.stream-availability-details, .player-help { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(128,128,128,.2); }
+.stream-availability-heading { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 8px; font-size: .8rem; }
+#stream-availability-context { color: var(--text-muted); }
+.player-help a { color: inherit; text-decoration: underline; }
 @media (max-width: 768px) {
-    .player-sound-settings label { flex-basis: 100%; font-size: .9rem; }
-    .player-sound-select { width: 100%; min-width: 0; }
-    .player-sound-settings select { min-height: 44px; font-size: 16px; text-overflow: ellipsis; }
-    .player-sound-settings small { font-size: .78rem; overflow-wrap: anywhere; }
+    .watch-controls { gap: 10px; }
+    .watch-controls #server-selector { width: 100%; justify-content: space-between; }
+    .watch-tools { width: 100%; justify-content: space-between; gap: 12px; }
+    .player-settings { margin-inline-start: auto; }
+    .player-sound-settings select { font-size: 16px; }
 }
-.watch-progress-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; }
-.watch-progress-heading span { font-weight: 600; }
-#watch-progress-time { display: block; margin-top: 6px; font-size: 0.8rem; color: var(--text-muted); }
-.watch-progress progress, .card-watch-progress progress { display: block; width: 100%; height: 6px; border: none; border-radius: 999px; overflow: hidden; background: rgba(128,128,128,0.25); accent-color: var(--main-red); }
-.watch-progress progress::-webkit-progress-bar, .card-watch-progress progress::-webkit-progress-bar { background: rgba(128,128,128,0.25); border-radius: 999px; }
-.watch-progress progress::-webkit-progress-value, .card-watch-progress progress::-webkit-progress-value { background: var(--main-red); border-radius: 999px; }
-.watch-progress progress::-moz-progress-bar, .card-watch-progress progress::-moz-progress-bar { background: var(--main-red); border-radius: 999px; }
+@media (max-width: 380px) {
+    .watch-controls #server-selector { gap: 4px; }
+    .watch-controls #server-selector .server-label { display: none; }
+}
+.card-watch-progress progress { display: block; width: 100%; height: 6px; border: none; border-radius: 999px; overflow: hidden; background: rgba(128,128,128,0.25); accent-color: var(--main-red); }
+.card-watch-progress progress::-webkit-progress-bar { background: rgba(128,128,128,0.25); border-radius: 999px; }
+.card-watch-progress progress::-webkit-progress-value { background: var(--main-red); border-radius: 999px; }
+.card-watch-progress progress::-moz-progress-bar { background: var(--main-red); border-radius: 999px; }
 
 .skeleton {
     background: #1f1f1f;

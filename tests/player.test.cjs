@@ -339,13 +339,30 @@ test('Muted and default preferences work; blocked storage retains this page pref
 test('All 19 languages include sound settings labels and the selector has an accessible label', () => {
     const { context } = loadPlayer();
     for (const [locale, labels] of Object.entries(context.window.XUDO_I18N.TRANSLATIONS)) {
-        for (const key of ['soundPreference', 'soundAuto', 'soundOn', 'soundOff', 'soundPreferenceNote', 'soundSessionOnly']) {
+        for (const key of ['playerSettings', 'soundPreference', 'soundAuto', 'soundOn', 'soundOff', 'soundPreferenceNote', 'soundSessionOnly']) {
             assert.ok(labels[key], `${locale}:${key}`);
         }
     }
     const html = fs.readFileSync(path.join(root, 'watch.html'), 'utf8');
     assert.match(html, /for="player-sound-preference"/);
     assert.match(html, /aria-describedby="player-sound-note"/);
+});
+
+test('Restart remains available in settings while playback progress stays stored without a second timeline', () => {
+    const { context, player } = loadPlayer();
+    const restart = { hidden: true };
+    const lookup = context.document.getElementById;
+    context.document.getElementById = id => id === 'restart-playback' ? restart : lookup(id);
+    context.window.changeServer(1);
+    assert.equal(restart.hidden, true);
+    context.onPlayerProgress(message(player.frames.at(-1)));
+    assert.equal(restart.hidden, false);
+    assert.equal(restart.textContent, 'Start over');
+    assert.equal(context.window.XUDO_PLAYBACK.get({ type: 'movie', id: 27205 }).position, 125);
+    context.restartPlayback();
+    assert.equal(restart.hidden, true);
+    assert.equal(context.window.XUDO_PLAYBACK.get({ type: 'movie', id: 27205 }), null);
+    assert.equal(new URL(player.frames.at(-1).src).searchParams.get('startAt'), '0.01');
 });
 
 test('Watch page exposes six server buttons and every language mentions the new servers', () => {

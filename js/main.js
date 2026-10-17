@@ -1542,6 +1542,17 @@ async function initWatchPage() {
     if (!id || !type) return (window.location.href = 'index.html');
     window.addEventListener('message', onPlayerProgress);
     document.getElementById('restart-playback')?.addEventListener('click', restartPlayback);
+    const settings = document.getElementById('player-settings');
+    document.getElementById('player-settings-label').textContent = TEXTS.playerSettings;
+    document.addEventListener('click', event => {
+        if (settings.open && !settings.contains(event.target)) settings.open = false;
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && settings.open) {
+            settings.open = false;
+            settings.querySelector('summary').focus();
+        }
+    });
     document.getElementById('stream-availability-retry')?.addEventListener('click', () => {
         refreshStreamAvailability({ type, id, season: currentSeason, episode: currentEpisode }, true);
     });
@@ -1572,22 +1583,11 @@ async function initWatchPage() {
     await fetchSimilarMovies(type, id);
 }
 
-function renderWatchProgress(record, resumed = false) {
-    const panel = document.getElementById('watch-progress');
-    if (!panel) return;
-    panel.hidden = !supportsPlaybackProgress() || !record || record.position <= 0;
-    if (panel.hidden) return;
-    const percent = Math.min(100, Math.round(record.position / record.duration * 1000) / 10);
-    const time = window.XUDO_PLAYBACK.formatTime(record.position);
-    document.getElementById('watch-progress-label').textContent = record.completed
-        ? TEXTS.watchedComplete : (resumed ? TEXTS.resumeAt : TEXTS.progressSaved).replace('{time}', time);
-    const meter = document.getElementById('watch-progress-meter');
-    meter.value = percent;
-    meter.setAttribute('aria-label', TEXTS.contWatch);
-    document.getElementById('watch-progress-time').textContent = `${time} / ${window.XUDO_PLAYBACK.formatTime(record.duration)} · ${percent}%`;
+function updateRestartAction(record) {
     const restart = document.getElementById('restart-playback');
+    if (!restart) return;
     restart.textContent = TEXTS.startOver;
-    restart.hidden = false;
+    restart.hidden = !supportsPlaybackProgress() || !record || record.position <= 0;
 }
 
 function initVidSrcSoundPreference() {
@@ -1626,7 +1626,7 @@ function onPlayerProgress(event) {
     const record = playback.save(_activePlayback, data.position, data.duration, data.status);
     if (!record) return;
     _latestPlaybackProgress = record;
-    renderWatchProgress(record);
+    updateRestartAction(record);
     if (_watchMetadata) saveWatchHistory(_watchMetadata, record);
 }
 
@@ -1655,6 +1655,8 @@ async function refreshStreamAvailability(content, force = false) {
     const panel = document.getElementById('stream-availability');
     if (!panel) return;
     panel.hidden = currentServer !== 1;
+    const details = document.getElementById('stream-availability-details');
+    if (details) details.hidden = panel.hidden;
     if (panel.hidden) return;
     document.getElementById('stream-availability-title').textContent = TEXTS.streamAvailability;
     document.getElementById('stream-availability-context').textContent = content.type === 'tv'
@@ -1666,6 +1668,7 @@ async function refreshStreamAvailability(content, force = false) {
     retry.disabled = true;
     panel.dataset.state = 'checking';
     status.textContent = TEXTS.streamChecking;
+    panel.title = TEXTS.streamAvailabilityNote;
     streamAvailabilityAbort = new AbortController();
     let result;
     try {
@@ -1689,6 +1692,10 @@ function updatePlayer(type, id) {
 
     _activePlayback = null;
     _latestPlaybackProgress = null;
+    const settings = document.getElementById('player-settings');
+    if (settings) settings.open = false;
+    const tools = document.getElementById('watch-tools');
+    if (tools) tools.hidden = !supportsPlaybackProgress();
     const soundPanel = document.getElementById('player-sound-settings');
     if (soundPanel) soundPanel.hidden = currentServer !== 1;
     const params = new URLSearchParams(window.location.search);
@@ -1739,7 +1746,7 @@ function updatePlayer(type, id) {
     el.innerHTML = '';
     el.appendChild(iframe);
     if (supportsPlaybackProgress()) _activePlayback = { ...content, server: currentServer, frame: iframe };
-    renderWatchProgress(_activePlayback ? window.XUDO_PLAYBACK.get(content) : null, true);
+    updateRestartAction(_activePlayback ? window.XUDO_PLAYBACK.get(content) : null);
 }
 
 function syncServerButtons() {
