@@ -133,3 +133,55 @@ test('Recommendations fall back when the primary response contains only excluded
     assert.match(target.innerHTML, /Valid fallback/);
     assert.doesNotMatch(target.innerHTML, /★ NR/);
 });
+
+test('Only movie cards carry a hidden quality badge slot', () => {
+    const { context } = loadApp();
+    assert.match(context.createCardHTML(movie), /<span class="card-quality" hidden><\/span>/);
+    assert.doesNotMatch(context.createCardHTML(tv), /card-quality/);
+});
+
+test('Quality badge shows only a verified quality and stays hidden otherwise', async () => {
+    const { context } = loadApp();
+    const cardFor = id => { const badge = { hidden: true, dataset: {}, textContent: '' };
+        return { badge, card: { dataset: { id }, querySelector: () => badge } }; };
+    const outcomes = { 1: { state: 'available', quality: 'CAM' }, 2: { state: 'available', quality: '' },
+        3: { state: 'unavailable' }, 4: { state: 'unknown' } };
+    const requests = [];
+    context.window.XUDO_STREAM_AVAILABILITY = { check: async content => {
+        requests.push(content);
+        if (content.id === '5') throw Error('Offline');
+        return outcomes[content.id]; } };
+    const results = {};
+    for (const id of ['1', '2', '3', '4', '5']) { results[id] = cardFor(id); await context.resolveCardQuality(results[id].card); }
+    assert.equal(requests[0].type, 'movie');
+    assert.equal(requests[0].id, '1');
+    assert.equal(results[1].badge.hidden, false);
+    assert.equal(results[1].badge.textContent, 'CAM');
+    assert.equal(results[1].badge.dataset.quality, 'CAM');
+    for (const id of ['2', '3', '4', '5']) assert.equal(results[id].badge.hidden, true, `id ${id} stays hidden`);
+    context.window.XUDO_STREAM_AVAILABILITY = undefined;
+    await context.resolveCardQuality(results[3].card);
+});
+
+test('Quality checks never run more than four at a time and skip cards that leave view', async () => {
+    const { context } = loadApp();
+    let observed;
+    context.IntersectionObserver = function (callback) {
+        observed = callback;
+        this.observe = () => {}; this.unobserve = () => {};
+    };
+    const cards = Array.from({ length: 7 }, (_, i) => ({ dataset: { id: String(i + 1) },
+        querySelector: () => ({ hidden: true, dataset: {} }) }));
+    const root = { querySelectorAll: () => cards };
+    let running = 0, peak = 0; const release = [];
+    context.window.XUDO_STREAM_AVAILABILITY = { check: () => { running++; peak = Math.max(peak, running);
+        return new Promise(resolve => release.push(() => { running--; resolve({ state: 'unknown' }); })); } };
+    context.observeCardQuality(root);
+    observed(cards.map(target => ({ target, isIntersecting: true })));
+    observed([{ target: cards[6], isIntersecting: false }]);
+    assert.equal(release.length, 4);
+    while (release.length) { release.shift()(); await new Promise(setImmediate); }
+    assert.equal(peak, 4);
+    assert.equal(cards.filter(card => card.dataset.qualitySeen === '1').length, 7);
+    assert.equal(running, 0);
+});

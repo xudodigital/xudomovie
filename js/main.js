@@ -194,10 +194,6 @@ function isFavorite(id) {
     return (JSON.parse(localStorage.getItem('xudo_favs')) || []).some(f => f.id == id);
 }
 
-function isWatchLater(id) {
-    return (JSON.parse(localStorage.getItem('xudo_watch_later')) || []).some(f => f.id == id);
-}
-
 function readWatchHistory() {
     try {
         const history = JSON.parse(localStorage.getItem('xudo_history'));
@@ -314,6 +310,8 @@ function initHeaderScroll() {
         if (header) header.classList.toggle('scrolled', window.scrollY > 50);
     }, { passive: true });
 }
+
+try { localStorage.removeItem('xudo_watch_later'); } catch (_) {}
 
 (function purgeStalHardcodedGenreCache() {
     if (!GENRE_HARDCODED[CURRENT_LANG]) return;
@@ -678,17 +676,12 @@ function createCardHTML(item, typeOverride) {
         : fallbackImage;
     const rating      = item.vote_average ? item.vote_average.toFixed(1) : 'NR';
     const isFav       = isFavorite(item.id);
-    const isWL        = isWatchLater(item.id);
     const targetLink    = getTargetUrl({ id: item.id, media_type: t, season: item.season, episode: item.episode, server: item.server });
     const mediaTypeLabel = t === 'movie' ? 'Movie' : 'TV Show';
 
     const favIcon = isFav
         ? '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
         : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
-
-    const wlIcon = isWL
-        ? '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 11H8a1 1 0 0 1 0-2h4V7a1 1 0 0 1 2 0v5a1 1 0 0 1-1 1z"/></svg>'
-        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
 
     let continueBadge = '';
     if (t === 'tv' && item.season && item.episode) {
@@ -711,16 +704,10 @@ function createCardHTML(item, typeOverride) {
                 data-fav-year="${year}" data-fav-rating="${rating}">
                 ${favIcon}
             </button>
-            <button class="card-wl-btn ${isWL ? 'active' : ''}"
-                data-wl-id="${item.id}" data-wl-type="${t}"
-                data-wl-title="${encodeURIComponent(title)}"
-                data-wl-poster="${encodeURIComponent(poster)}"
-                data-wl-year="${year}" data-wl-rating="${rating}">
-                ${wlIcon}
-            </button>
             <img src="${poster}" alt="${title} (${year}) Full ${mediaTypeLabel} Review & Details"
                  loading="lazy" onerror="this.onerror=null;this.src='${fallbackImage}';">
             <span class="card-rating">★ ${rating}</span>
+            ${t === 'movie' ? '<span class="card-quality" hidden></span>' : ''}
             <div class="card-info">
                 <div class="card-title">${title}</div>
                 <div class="card-year">${year} • ${t === 'movie' ? TEXTS.typeMovie : TEXTS.typeTv}</div>
@@ -728,6 +715,60 @@ function createCardHTML(item, typeOverride) {
                 ${progressHTML}
             </div>
         </div>`;
+}
+
+// Quality badges come from VidSrc's per-title index, so only cards near the
+// viewport are checked, a few at a time. Anything but a verified quality shows nothing.
+const CARD_QUALITY_CONCURRENCY = 4;
+const cardQualityQueue = [];
+let cardQualityObserver = null, cardQualityActive = 0;
+
+async function resolveCardQuality(card) {
+    const badge = card.querySelector('.card-quality');
+    const availability = window.XUDO_STREAM_AVAILABILITY;
+    if (!badge || !availability) return;
+    let result;
+    try { result = await availability.check({ type: 'movie', id: card.dataset.id }); } catch (_) { return; }
+    if (result?.state !== 'available' || !result.quality) return;
+    badge.textContent = result.quality;
+    badge.dataset.quality = result.quality;
+    badge.hidden = false;
+}
+
+function pumpCardQuality() {
+    while (cardQualityActive < CARD_QUALITY_CONCURRENCY && cardQualityQueue.length) {
+        const card = cardQualityQueue.shift();
+        cardQualityObserver?.unobserve(card);
+        cardQualityActive++;
+        resolveCardQuality(card).finally(() => { cardQualityActive--; pumpCardQuality(); });
+    }
+}
+
+function observeCardQuality(root = document) {
+    if (typeof IntersectionObserver !== 'function') return;
+    cardQualityObserver ||= new IntersectionObserver(entries => {
+        for (const { target, isIntersecting } of entries) {
+            const queued = cardQualityQueue.indexOf(target);
+            if (isIntersecting && queued === -1) cardQualityQueue.push(target);
+            else if (!isIntersecting && queued !== -1) cardQualityQueue.splice(queued, 1);
+        }
+        pumpCardQuality();
+    }, { rootMargin: '200px' });
+    root.querySelectorAll('.content-card[data-type="movie"]:not([data-quality-seen])').forEach(card => {
+        card.dataset.qualitySeen = '1';
+        cardQualityObserver.observe(card);
+    });
+}
+
+function initCardQualityBadges() {
+    observeCardQuality();
+    if (typeof MutationObserver !== 'function') return;
+    let scheduled = false;
+    new MutationObserver(() => {
+        if (scheduled) return;
+        scheduled = true;
+        requestAnimationFrame(() => { scheduled = false; observeCardQuality(); });
+    }).observe(document.body, { childList: true, subtree: true });
 }
 
 function attachCardDelegation(containerSelector) {
@@ -764,16 +805,6 @@ function attachCardDelegation(containerSelector) {
                 btn.dataset.favYear, btn.dataset.favRating, btn
             );
         }
-
-        if (btn.classList.contains('card-wl-btn')) {
-            e.preventDefault();
-            toggleWatchLaterCore(
-                btn.dataset.wlId, btn.dataset.wlType,
-                decodeURIComponent(btn.dataset.wlTitle),
-                decodeURIComponent(btn.dataset.wlPoster),
-                btn.dataset.wlYear, btn.dataset.wlRating, btn
-            );
-        }
     });
 }
 
@@ -788,26 +819,11 @@ function toggleFavoriteCore(id, type, title, poster, year, rating, btnElement) {
     updateButtonState(btnElement, 'fav', !isFav);
 }
 
-function toggleWatchLaterCore(id, type, title, poster, year, rating, btnElement) {
-    let list = JSON.parse(localStorage.getItem('xudo_watch_later')) || [];
-    const index = list.findIndex(f => f.id == id);
-    const isWL  = index !== -1;
-    if (isWL) list.splice(index, 1);
-    else       list.push({ id, type, title, poster, year, rating });
-    localStorage.setItem('xudo_watch_later', JSON.stringify(list));
-    trackEvent(isWL ? 'remove_from_watchlist' : 'add_to_watchlist', { content_type: type, content_id: id, movie_title: title });
-    updateButtonState(btnElement, 'wl', !isWL);
-}
-
 function updateButtonState(btn, type, active) {
     if (type === 'fav') {
         btn.innerHTML = active
             ? '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
             : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
-    } else if (type === 'wl') {
-        btn.innerHTML = active
-            ? '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 11H8a1 1 0 0 1 0-2h4V7a1 1 0 0 1 2 0v5a1 1 0 0 1-1 1z"/></svg>'
-            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
     }
     btn.classList.toggle('active', active);
 }
@@ -1217,19 +1233,6 @@ async function initBrowse() {
         document.getElementById('browse-grid').innerHTML = items.length
             ? items.map(i => createCardHTML(i)).join('')
             : `<div class="no-results">${TEXTS.noFavorites}</div>`;
-        attachCardDelegation('#browse-grid');
-        return;
-    }
-
-    if (type === 'watchlater') {
-        document.getElementById('page-title').innerText = TEXTS.watchLater;
-        document.getElementById('genre-list').style.display = 'none';
-        document.getElementById('load-more-btn').style.display = 'none';
-        const wl = JSON.parse(localStorage.getItem('xudo_watch_later')) || [];
-        const items = await hydrateSavedCatalogItems(wl);
-        document.getElementById('browse-grid').innerHTML = items.length
-            ? items.map(i => createCardHTML(i)).join('')
-            : `<div class="no-results">${TEXTS.noWatchLater}</div>`;
         attachCardDelegation('#browse-grid');
         return;
     }
@@ -2201,8 +2204,7 @@ window.initPageActionButtons = function (id, type, title, poster, year, rating) 
 
 function _refreshPageButtons() {
     const favBtn = document.getElementById('page-fav-btn');
-    const wlBtn  = document.getElementById('page-wl-btn');
-    if (!favBtn || !wlBtn || !_page) return;
+    if (!favBtn || !_page) return;
 
     const isFav  = isFavorite(_page.id);
     favBtn.classList.toggle('active', isFav);
@@ -2210,11 +2212,6 @@ function _refreshPageButtons() {
     favLabel.textContent = isFav ? 'SAVED ✓' : 'FAVORITE';
     const favIcon = favBtn.querySelector('svg');
     if (favIcon) { favIcon.style.fill = isFav ? '#e50914' : 'none'; favIcon.style.stroke = isFav ? '#e50914' : 'currentColor'; }
-
-    const isWL  = isWatchLater(_page.id);
-    wlBtn.classList.toggle('active', isWL);
-    const wlLabel = wlBtn.querySelector('span') || wlBtn.appendChild(document.createElement('span'));
-    wlLabel.textContent = isWL ? 'IN LIST ✓' : 'WATCH LATER';
 }
 
 window.togglePageFav = function () {
@@ -2224,16 +2221,6 @@ window.togglePageFav = function () {
     if (idx === -1) favs.push({ id: _page.id, type: _page.type, title: _page.title, poster: _page.poster, year: _page.year, rating: _page.rating });
     else            favs.splice(idx, 1);
     localStorage.setItem('xudo_favs', JSON.stringify(favs));
-    _refreshPageButtons();
-};
-
-window.togglePageWatchLater = function () {
-    if (!_page) return;
-    let list  = JSON.parse(localStorage.getItem('xudo_watch_later')) || [];
-    const idx = list.findIndex(f => f.id == _page.id);
-    if (idx === -1) list.push({ id: _page.id, type: _page.type, title: _page.title, poster: _page.poster, year: _page.year, rating: _page.rating });
-    else            list.splice(idx, 1);
-    localStorage.setItem('xudo_watch_later', JSON.stringify(list));
     _refreshPageButtons();
 };
 
@@ -2303,6 +2290,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initHeaderScroll();
     initBackToTop();
     initAdBlockDetection();
+    initCardQualityBadges();
 
     const pageRouter = () => {
         if      (document.getElementById('hero-slider'))      initHome();
