@@ -753,7 +753,7 @@ a {
 
 .card-quality {
     position: absolute;
-    top: 46px;
+    top: 10px;
     left: 8px;
     padding: 2px 6px;
     border-radius: 4px;
@@ -770,7 +770,7 @@ a {
 
 .card-fav-btn {
     position: absolute;
-    top: 8px;
+    top: 200px; /* bottom-left of the 240px poster */
     left: 8px;
     width: 32px;
     height: 32px;
