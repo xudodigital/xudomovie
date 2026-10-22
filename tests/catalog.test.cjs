@@ -134,10 +134,18 @@ test('Recommendations fall back when the primary response contains only excluded
     assert.doesNotMatch(target.innerHTML, /★ NR/);
 });
 
-test('Only movie cards carry a hidden quality badge slot', () => {
+test('Movie and TV cards both carry a hidden quality badge slot', () => {
     const { context } = loadApp();
-    assert.match(context.createCardHTML(movie), /<span class="card-quality" hidden><\/span>/);
-    assert.doesNotMatch(context.createCardHTML(tv), /card-quality/);
+    for (const item of [movie, tv]) assert.match(context.createCardHTML(item), /<span class="card-quality" hidden><\/span>/);
+});
+
+test('Movie cards check the movie index and TV cards check the whole series', async () => {
+    const { context } = loadApp();
+    const requests = [];
+    context.window.XUDO_STREAM_AVAILABILITY = { check: async content => { requests.push(content); return { state: 'unknown' }; } };
+    for (const type of ['movie', 'tv'])
+        await context.resolveCardQuality({ dataset: { id: '7', type }, querySelector: () => ({ hidden: true, dataset: {} }) });
+    assert.deepEqual(requests.map(r => r.type), ['movie', 'show']);
 });
 
 test('Quality badge shows only a verified quality and stays hidden otherwise', async () => {

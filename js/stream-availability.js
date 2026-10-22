@@ -5,12 +5,14 @@
     const qualities = new Set(['1080p', '720p', 'DVD', 'SD', 'CAM']);
 
     function target(content) {
-        if (!content || !['movie', 'tv'].includes(content.type)) return null;
+        if (!content || !['movie', 'tv', 'show'].includes(content.type)) return null;
         const number = (value, minimum) => /^\d+$/.test(String(value)) &&
             Number.isSafeInteger(Number(value)) && Number(value) >= minimum;
         if (!number(content.id, 1)) return null;
         const id = String(Number(content.id));
         if (content.type === 'movie') return { path: `movie/${id}`, id, type: 'movie' };
+        // Whole-series index, used for catalogue cards where no episode is chosen.
+        if (content.type === 'show') return { path: `tv/${id}`, id, type: 'tv', show: true };
         if (!number(content.season, 0) || !number(content.episode, 1)) return null;
         const season = Number(content.season), episode = Number(content.episode);
         return { path: `tv/${id}/${season}/${episode}`, id, type: 'episode', season, episode };
@@ -40,7 +42,7 @@
                 if (response.status === 404 && data?.status_code === 404 && data.error === 'not found') {
                     result = { state: 'unavailable' };
                 } else if (response.status === 200 && data?.status_code === 200 && data.type === query.type &&
-                    String(data.tmdb_id) === query.id && (query.type === 'movie' ||
+                    String(data.tmdb_id) === query.id && (query.type === 'movie' || query.show ||
                     target({ type: 'tv', id: data.tmdb_id, season: data.season, episode: data.episode })?.path === query.path)) {
                     result = { state: 'available', quality: qualities.has(data.quality) ? data.quality : '' };
                 } else return unknown;

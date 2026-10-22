@@ -753,8 +753,8 @@ a {
 
 .card-quality {
     position: absolute;
-    top: 212px;
-    right: 8px;
+    top: 14px;
+    left: 46px;
     padding: 2px 6px;
     border-radius: 4px;
     background: rgba(0, 0, 0, 0.8);

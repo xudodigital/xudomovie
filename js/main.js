@@ -707,7 +707,7 @@ function createCardHTML(item, typeOverride) {
             <img src="${poster}" alt="${title} (${year}) Full ${mediaTypeLabel} Review & Details"
                  loading="lazy" onerror="this.onerror=null;this.src='${fallbackImage}';">
             <span class="card-rating">★ ${rating}</span>
-            ${t === 'movie' ? '<span class="card-quality" hidden></span>' : ''}
+            <span class="card-quality" hidden></span>
             <div class="card-info">
                 <div class="card-title">${title}</div>
                 <div class="card-year">${year} • ${t === 'movie' ? TEXTS.typeMovie : TEXTS.typeTv}</div>
@@ -728,7 +728,7 @@ async function resolveCardQuality(card) {
     const availability = window.XUDO_STREAM_AVAILABILITY;
     if (!badge || !availability) return;
     let result;
-    try { result = await availability.check({ type: 'movie', id: card.dataset.id }); } catch (_) { return; }
+    try { result = await availability.check({ type: card.dataset.type === 'tv' ? 'show' : 'movie', id: card.dataset.id }); } catch (_) { return; }
     if (result?.state !== 'available' || !result.quality) return;
     badge.textContent = result.quality;
     badge.dataset.quality = result.quality;
@@ -754,7 +754,7 @@ function observeCardQuality(root = document) {
         }
         pumpCardQuality();
     }, { rootMargin: '200px' });
-    root.querySelectorAll('.content-card[data-type="movie"]:not([data-quality-seen])').forEach(card => {
+    root.querySelectorAll('.content-card:not([data-quality-seen])').forEach(card => {
         card.dataset.qualitySeen = '1';
         cardQualityObserver.observe(card);
     });

@@ -24,6 +24,25 @@ test('Availability validates IDs and isolates movies, TV episodes and anime epis
     assert.equal(calls, 0);
 });
 
+test('Series index supplies a show-level quality without needing an episode', async () => {
+    assert.equal(target({ type: 'show', id: 1396 }).path, 'tv/1396');
+    assert.equal(target({ type: 'show', id: '../1396' }), null);
+    const show = { status_code: 200, type: 'tv', tmdb_id: '1396', quality: '720p' };
+    let url;
+    const client = createClient({ fetch: async address => { url = address; return response(200, show); } });
+    assert.deepEqual(await client.check({ type: 'show', id: 1396 }), { state: 'available', quality: '720p' });
+    assert.equal(url, 'https://vidsrc.sh/info/tv/1396.json');
+    for (const [status, data] of [[200, { ...show, tmdb_id: '999' }], [200, { ...show, type: 'episode' }],
+        [200, { ...show, status_code: 500 }], [500, show]]) {
+        const other = createClient({ fetch: async () => response(status, data) });
+        assert.equal((await other.check({ type: 'show', id: 1396 })).state, 'unknown');
+    }
+    const missing = createClient({ fetch: async () => response(404, { status_code: 404, error: 'not found' }) });
+    assert.equal((await missing.check({ type: 'show', id: 1396 })).state, 'unavailable');
+    const episodeOnly = createClient({ fetch: async () => response(200, show) });
+    assert.equal((await episodeOnly.check(episode)).state, 'unknown');
+});
+
 test('Official 200 and 404 contracts produce distinct states without sending credentials', async () => {
     let request;
     const client = createClient({ fetch: async (url, options) => { request = { url, options }; return response(200, available); } });
