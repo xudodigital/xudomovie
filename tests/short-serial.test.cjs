@@ -107,7 +107,7 @@ test('Serial cards link to DramaTap IDs, escape titles and reject previous provi
 test('Every language ships the Short Drama UI labels and the episode template', () => {
     const context = vm.createContext({ window: {} });
     vm.runInContext(fs.readFileSync('js/i18n/translations.js', 'utf8'), context);
-    const keys = ['sdTrending', 'sdLatest', 'sdEpisodes', 'sdEpisode', 'sdRetry', 'sdPrev', 'sdPrevShort', 'sdNextShort', 'sdNext', 'sdEmpty', 'sdUnavailable', 'sdPlayError', 'sdNoStream', 'sdNoEpisodes'];
+    const keys = ['sdViews', 'sdTrending', 'sdLatest', 'sdEpisodes', 'sdEpisode', 'sdRetry', 'sdPrev', 'sdPrevShort', 'sdNextShort', 'sdNext', 'sdEmpty', 'sdUnavailable', 'sdPlayError', 'sdNoStream', 'sdNoEpisodes'];
     for (const [locale, labels] of Object.entries(context.window.XUDO_I18N.TRANSLATIONS)) {
         for (const key of keys) assert.ok(labels[key], `${locale}:${key}`);
         assert.match(labels.sdEpisode, /\{n\}/, locale);
@@ -139,4 +139,19 @@ test('Latest feed pages come from /new/{page}; trending stays single-page and ba
             assert.equal((await call('catalog', query)).status, 400, query);
         assert.equal((await call('search', 'q=a&page=2')).status, 400);
     });
+});
+test('Search results keep the play count as views; catalogue items without it stay clean', async () => {
+    const { normalizeSearch, parseCatalogHTML } = await load();
+    const [withViews, without] = normalizeSearch({ items: [{ ...drama, play: 7233 }, { ...drama, id: 2, play: 0 }] });
+    assert.equal(withViews.views, 7233); assert.equal(Object.hasOwn(without, 'views'), false);
+    assert.equal(Object.hasOwn(parseCatalogHTML(catalogue, 'latest')[0], 'views'), false);
+});
+test('Cards show a compact, localized views chip only when views are known', () => {
+    const context = vm.createContext({ window: {}, URL, URLSearchParams, localStorage: { getItem: () => 'en-US' } });
+    vm.runInContext(fs.readFileSync('js/i18n/translations.js', 'utf8'), context);
+    vm.runInContext(fs.readFileSync('js/short-serial.js', 'utf8'), context);
+    const api = context.window.XUDO_SHORT_SERIAL, base = { id: '9', provider: 'dramatap', title: 'x', episodeCount: 12 };
+    const html = api.card({ ...base, views: 7233 });
+    assert.match(html, /class="card-rating sd-views" title="7,233 views"/); assert.match(html, /7\.2K/);
+    assert.doesNotMatch(api.card(base), /sd-views/); assert.doesNotMatch(api.card({ ...base, views: 0 }), /sd-views/);
 });

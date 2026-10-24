@@ -45,7 +45,7 @@ export function normalizeDrama(raw) {
     if (!ID.test(id) || !title) return null;
     return { id, provider: PROVIDER, channel: 'DramaTap', title: title.slice(0, 300),
         poster: safeMediaURL(raw.cover), synopsis: text(raw.synopsis).slice(0, 10000),
-        episodeCount: count(raw.episodeCount) || episodeCount(raw.label) };
+        episodeCount: count(raw.episodeCount) || episodeCount(raw.label), ...(count(raw.play) ? { views: count(raw.play) } : {}) };
 }
 function uniqueItems(rows) {
     const seen = new Set();

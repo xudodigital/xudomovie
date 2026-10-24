@@ -4079,6 +4079,7 @@ a {
 .media-grid .sd-serial-card { width: 100%; min-width: 0; }
 .sd-serial-poster { position: relative; height: 240px; background: #222; overflow: hidden; border-radius: 8px; }
 .content-card.sd-serial-card img { height: 100%; }
+.sd-serial-card .sd-views { display: inline-flex; align-items: center; gap: 4px; color: #fff; }
 .sd-serial-card .card-year { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sd-poster-placeholder { display: grid; height: 100%; place-items: center; color: #aaa; font-size: 2rem; }
 .sd-stream-retry { padding: 8px 14px; border-radius: 8px; border: 0; background: var(--main-red); color: #fff; cursor: pointer; font: inherit; font-size: .85rem; }

@@ -3,7 +3,7 @@
     'use strict';
     const ID = /^[1-9]\d{0,11}$/;
     const providers = { dramatap: 'DramaTap' };
-    const FALLBACK = { shortDramaSection: 'Short Drama', viewMore: 'View More', loading: 'Loading…', noSynopsis: '', loadMore: 'Load More', contWatch: 'Continue Watching', selectEpisode: 'Select Episode', share: 'Share', youMayAlsoLike: 'You May Also Like', sdTrending: 'Trending', sdLatest: 'Latest', sdEpisodes: 'episodes', sdEpisode: 'Episode {n}', sdRetry: 'Try again', sdPrev: 'Previous episode', sdNext: 'Next episode', sdPrevShort: 'Prev', sdNextShort: 'Next', sdEmpty: 'No dramas found.', sdUnavailable: 'Short dramas are temporarily unavailable. Please try again later.', sdPlayError: 'This video could not be played. Try again to refresh the stream or select another episode.', sdNoStream: 'No playable stream is available for this episode.', sdNoEpisodes: 'No episodes are available yet.' };
+    const FALLBACK = { shortDramaSection: 'Short Drama', viewMore: 'View More', loading: 'Loading…', noSynopsis: '', loadMore: 'Load More', contWatch: 'Continue Watching', selectEpisode: 'Select Episode', share: 'Share', youMayAlsoLike: 'You May Also Like', sdTrending: 'Trending', sdLatest: 'Latest', sdEpisodes: 'episodes', sdViews: 'views', sdEpisode: 'Episode {n}', sdRetry: 'Try again', sdPrev: 'Previous episode', sdNext: 'Next episode', sdPrevShort: 'Prev', sdNextShort: 'Next', sdEmpty: 'No dramas found.', sdUnavailable: 'Short dramas are temporarily unavailable. Please try again later.', sdPlayError: 'This video could not be played. Try again to refresh the stream or select another episode.', sdNoStream: 'No playable stream is available for this episode.', sdNoEpisodes: 'No episodes are available yet.' };
     // Same language source as js/main.js (TRANSLATIONS[xudo_lang]); missing keys fall back to English.
     function texts() {
         let language = 'en-US';
@@ -26,12 +26,21 @@
         const percent = Number.isFinite(position) && Number.isFinite(duration) && duration > 0 ? Math.max(0, Math.min(100, Math.round(position / duration * 100))) : null;
         return `<div class="card-watch-progress">${percent === null ? '' : `<progress max="100" value="${percent}" aria-label="${esc(t.contWatch)}"></progress>`}<span>${esc(episodeLabel(t, item.episode))}${percent === null ? '' : ` · ${percent}%`}</span></div>`;
     }
+    const EYE = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+    function viewsHTML(item, t) {
+        if (!Number.isFinite(item.views) || item.views <= 0) return '';
+        let language = 'en-US';
+        try { language = localStorage.getItem('xudo_lang') || language; } catch (_) {}
+        let compact;
+        try { compact = new Intl.NumberFormat(language, { notation: 'compact', maximumFractionDigits: 1 }).format(item.views); } catch (_) { compact = String(item.views); }
+        return `<span class="card-rating sd-views" title="${esc(`${item.views.toLocaleString()} ${t.sdViews}`)}">${EYE} ${esc(compact)}</span>`;
+    }
     function card(item) {
         if (!item || !Object.hasOwn(providers, item.provider) || !ID.test(item.id || '') || !item.title) return '';
         const t = texts(), href = watchURL(item.id, item.episode);
         const poster = mediaURL(item.poster), saved = isSaved(item.id);
         const count = Number.isFinite(item.episodeCount) && item.episodeCount > 0 ? item.episodeCount : 0;
-        return `<div class="content-card sd-serial-card" data-sd-id="${item.id}"><a class="sd-card-link" href="${esc(href)}"><div class="sd-serial-poster">${poster ? `<img src="${esc(poster)}" alt="${esc(item.title)}" loading="lazy" referrerpolicy="no-referrer">` : '<span class="sd-poster-placeholder" aria-hidden="true">▶</span>'}${count ? `<span class="sd-duration">${count} ${t.sdEpisodes}</span>` : ''}</div><div class="card-info"><div class="card-title">${esc(item.title)}</div><div class="card-year">${esc(t.shortDramaSection)}</div>${progressHTML(item, t)}</div></a><button type="button" class="card-fav-btn ${saved ? 'active' : ''}" data-fav-id="${item.id}" data-fav-type="shortdrama" data-fav-title="${encodeURIComponent(item.title)}" data-fav-poster="${encodeURIComponent(poster)}" data-fav-episodes="${count}" aria-pressed="${saved}" aria-label="${esc(item.title)}">${saved ? HEART_FILLED : HEART_OUTLINE}</button></div>`;
+        return `<div class="content-card sd-serial-card" data-sd-id="${item.id}"><a class="sd-card-link" href="${esc(href)}"><div class="sd-serial-poster">${poster ? `<img src="${esc(poster)}" alt="${esc(item.title)}" loading="lazy" referrerpolicy="no-referrer">` : '<span class="sd-poster-placeholder" aria-hidden="true">▶</span>'}${count ? `<span class="sd-duration">${count} ${t.sdEpisodes}</span>` : ''}${viewsHTML(item, t)}</div><div class="card-info"><div class="card-title">${esc(item.title)}</div><div class="card-year">${esc(t.shortDramaSection)}</div>${progressHTML(item, t)}</div></a><button type="button" class="card-fav-btn ${saved ? 'active' : ''}" data-fav-id="${item.id}" data-fav-type="shortdrama" data-fav-title="${encodeURIComponent(item.title)}" data-fav-poster="${encodeURIComponent(poster)}" data-fav-episodes="${count}" aria-pressed="${saved}" aria-label="${esc(item.title)}">${saved ? HEART_FILLED : HEART_OUTLINE}</button></div>`;
     }
     // Rows that main.js does not delegate (homepage row, watch-page recommendations) toggle favourites here.
     function bindFavorites(container) {
@@ -127,6 +136,14 @@
         document.querySelector('.cast-section').hidden = true;
         for (const key of ['detail-rating', 'detail-cert', 'detail-status']) document.getElementById(key).hidden = true;
         document.querySelectorAll('.metadata > .quality').forEach(el => { if (el.id !== 'detail-runtime') el.style.display = 'none'; });
+        // The static "HD" chip becomes the real stream resolution once the video reports it.
+        const resolution = [...document.querySelectorAll('.metadata > .quality')].find(el => !el.id);
+        const showResolution = () => {
+            // Vertical video is labelled by its short side (720x1280 is 720p).
+            const height = Math.min(video.videoWidth || Infinity, video.videoHeight || Infinity);
+            if (!resolution || !Number.isFinite(height)) return;
+            resolution.textContent = `${[2160, 1440, 1080, 720, 480, 360].find(h => height >= h * 0.9) || height}p`; resolution.style.display = '';
+        };
         document.getElementById('detail-year').textContent = t.shortDramaSection;
         document.getElementById('detail-runtime').textContent = '';
         document.getElementById('detail-title').textContent = t.loading;
@@ -134,6 +151,7 @@
         document.querySelector('.recommendations-section').hidden = true;
         if (!ID.test(id || '')) { status.textContent = t.sdUnavailable; document.getElementById('detail-title').textContent = t.shortDramaSection; return; }
         const video = document.createElement('video'); video.className = 'player-frame sd-watch-video'; video.controls = true; video.playsInline = true; video.preload = 'metadata'; player.replaceChildren(video);
+        video.addEventListener('loadedmetadata', showResolution); video.addEventListener('resize', showResolution);
         let hls, controller, version = 0, episodeList = [], selectedIndex = -1, drama = null, lastSave = 0;
         // Continue Watching: save position every 5 s, on pause and on leaving; finishing an episode points to the next one.
         function persist(finished = false) {
@@ -146,7 +164,7 @@
         }
         video.addEventListener('timeupdate', () => { if (Date.now() - lastSave > 5000) { lastSave = Date.now(); persist(); } });
         video.addEventListener('pause', () => persist());
-        const stop = () => { hls?.destroy(); hls = null; video.pause(); video.removeAttribute('src'); video.load(); };
+        const stop = () => { if (resolution) resolution.style.display = 'none'; hls?.destroy(); hls = null; video.pause(); video.removeAttribute('src'); video.load(); };
         const error = message => { status.textContent = message; retry.hidden = false; };
         async function setSource(source, token, autoplay = false, position = 0) {
             stop(); if (!source || !mediaURL(source.url)) return error(t.sdNoStream);
