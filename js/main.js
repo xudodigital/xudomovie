@@ -1273,7 +1273,7 @@ async function fetchMixedCountrySection(s, today) {
 
 // Short dramas come from DramaTap (js/short-serial.js); the homepage row is mounted by renderShortDramaRow.
 async function fetchShortDramaFeed(source) {
-    const res = await fetch('/api/shortdrama/catalog?provider=dramatap&feed=trending');
+    const res = await fetch('/api/shortdrama/catalog?provider=dramatap&feed=latest');
     if (!res.ok) throw new Error('Short drama feed failed');
     const data = await res.json();
     if (!Array.isArray(data.items) || !data.items.length) throw new Error('Short drama feed empty');
@@ -1359,8 +1359,8 @@ async function initBrowse() {
         document.getElementById('page-title').innerText = TEXTS.shortDramaSection;
         const grid = document.getElementById('browse-grid'), genreList = document.getElementById('genre-list');
         genreList.style.display = 'none';
-        let feed = params.get('feed') === 'latest' ? 'latest' : 'trending';
-        _renderBrowseTabs([['trending', TEXTS.sdTrending], ['latest', TEXTS.sdLatest]], feed, key => {
+        let feed = params.get('feed') === 'trending' ? 'trending' : 'latest';
+        _renderBrowseTabs([['latest', TEXTS.sdLatest], ['trending', TEXTS.sdTrending]], feed, key => {
             const url = new URL(window.location.href);
             url.searchParams.set('feed', key);
             history.replaceState(null, '', url);

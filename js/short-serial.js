@@ -81,8 +81,8 @@
             <div class="horizontal-slider">${items.map(item => card(item)).join('')}</div>`;
         bindFavorites(page.querySelector('.horizontal-slider'));
     }
-    // Browse page: one feed per tab. Latest is paginated upstream and uses Load More; trending is a single page.
-    async function browse(grid, feed = 'trending') {
+    // Browse page: one feed per tab (latest first). Latest is paginated upstream and uses Load More; trending is a single page.
+    async function browse(grid, feed = 'latest') {
         const t = texts(), loadMore = document.getElementById('load-more-btn');
         const token = grid.dataset.feed = `${feed}:${Date.now()}`;
         const current = () => grid.dataset.feed === token;

@@ -30,7 +30,7 @@ Implementasi adapter berada di `functions/_lib/shortdrama.js`. Dispatcher berada
 
 ## Integrasi antarmuka
 
-`js/short-serial.js` memasang katalog di `#sec-short-drama` pada beranda. Heading menggunakan `.section-heading` yang sama dengan kategori lain. Baris menampilkan feed trending; heading dan View More membuka `browse.html?type=shortdrama` dengan tab Trending/Latest (`&feed=latest`) dalam grid yang sama dengan kategori lain. Latest berpaginasi (Load More memakai `page`; respons membawa `hasMore`); Trending hanya satu halaman (±12 judul) karena DramaTap tidak menyediakan halaman berikutnya untuk daftar itu.
+`js/short-serial.js` memasang katalog di `#sec-short-drama` pada beranda. Heading menggunakan `.section-heading` yang sama dengan kategori lain. Baris menampilkan feed latest; heading dan View More membuka `browse.html?type=shortdrama` dengan tab Latest (default) dan Trending (`&feed=trending`) dalam grid yang sama dengan kategori lain. Latest berpaginasi (Load More memakai `page`; respons membawa `hasMore`); Trending hanya satu halaman (±12 judul) karena DramaTap tidak menyediakan halaman berikutnya untuk daftar itu.
 
 Pencarian global di `js/main.js` mengirim permintaan TMDB dan DramaTap secara bersamaan. Autocomplete dan grid pencarian menggabungkan kedua sumber dengan identitas berdasarkan provider dan jenis media. Pergantian query membatalkan permintaan sebelumnya. Status kegagalan per sumber ditampilkan bersama hasil yang tersedia.
 
