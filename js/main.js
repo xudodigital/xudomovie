@@ -1007,10 +1007,14 @@ async function initHome() {
 
 async function loadHeroSlider() {
     try {
-        const res = await fetch(`${BASE_URL}/trending/all/day?language=${CURRENT_LANG}`);
-        if (!res.ok) throw new Error('Trending fetch failed');
-        const data   = await res.json();
-        const slides = CATALOG.filter(data.results).slice(0, 10);
+        // Page 2 is only a reserve: about half of today's trending titles are not on VidSrc yet,
+        // so the gate below needs extra candidates to still fill ten slides.
+        const [first, reserve] = await Promise.allSettled([1, 2].map(page =>
+            fetch(`${BASE_URL}/trending/all/day?language=${CURRENT_LANG}&page=${page}`).then(r => { if (!r.ok) throw new Error('Trending fetch failed'); return r.json(); })));
+        if (first.status !== 'fulfilled') throw first.reason;
+        const candidates = CATALOG.filter([...first.value.results, ...(reserve.status === 'fulfilled' ? reserve.value.results || [] : [])]);
+        // Same rule as the rows: hide titles VidSrc reports as missing (errors and timeouts keep them).
+        const slides = (await filterAvailable(candidates.slice(0, 30), 'movie', { budget: 2500 })).slice(0, 10);
 
         const container = document.getElementById('hero-slider');
         const dots      = document.getElementById('hero-dots');
