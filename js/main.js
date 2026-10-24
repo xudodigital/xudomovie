@@ -1241,10 +1241,16 @@ async function loadContinueWatching() {
     attachCardDelegation('#continue-watching-section .horizontal-slider');
 }
 
+// Same gates as the Latest Movies / Latest TV Shows rows: enough votes, and for movies a theatrical or
+// digital release, so brand-new titles that are not out yet stay hidden until they appear in TMDB's data.
+const LATEST_MOVIE_RULES = '&vote_count.gte=50&with_release_type=3%7C2';
+const LATEST_TV_RULES = '&vote_count.gte=50';
+const isAnimeQuery = params => params.get('with_genres') === '16' && params.get('with_origin_country') === 'JP';
+
 async function fetchMixedCountrySection(s, today) {
     const [movieSettled, tvSettled] = await Promise.allSettled([
-        fetch(`${BASE_URL}${CATALOG.discoverEndpoint(`/discover/movie?${s.mixedCountry}&sort_by=primary_release_date.desc`, 'movie', today)}&language=${CURRENT_LANG}`),
-        fetch(`${BASE_URL}${CATALOG.discoverEndpoint(`/discover/tv?${s.mixedCountry}&sort_by=first_air_date.desc`, 'tv', today)}&language=${CURRENT_LANG}`),
+        fetch(`${BASE_URL}${CATALOG.discoverEndpoint(`/discover/movie?${s.mixedCountry}&sort_by=primary_release_date.desc${s.latestRules ? LATEST_MOVIE_RULES : ''}`, 'movie', today)}&language=${CURRENT_LANG}`),
+        fetch(`${BASE_URL}${CATALOG.discoverEndpoint(`/discover/tv?${s.mixedCountry}&sort_by=first_air_date.desc${s.latestRules ? LATEST_TV_RULES : ''}`, 'tv', today)}&language=${CURRENT_LANG}`),
     ]);
 
     let items = [];
@@ -1294,7 +1300,7 @@ async function loadAllSections() {
         { t: TEXTS.movPopular,       tk: 'movPopular',       u: `/discover/movie?sort_by=primary_release_date.desc&primary_release_date.lte=${today}&vote_count.gte=50&with_release_type=3%7C2`, k: 'movie', secId: 'sec-latest',    postFilter: r => !!r.poster_path },
         { t: TEXTS.latestTvSection,  tk: 'latestTvSection',  u: `/discover/tv?sort_by=first_air_date.desc&first_air_date.lte=${today}&vote_count.gte=50`,                                       k: 'tv',    secId: 'sec-latest-tv', postFilter: r => !!r.poster_path },
         { t: TEXTS.shortDramaSection, serial: true, secId: 'sec-short-drama' },
-        { t: TEXTS.animeSection,     tk: 'animeSection',    u: '/discover/tv?with_genres=16&with_origin_country=JP&sort_by=popularity.desc',                                                   k: 'tv',    secId: 'sec-anime',  mixedCountry: 'with_genres=16&with_origin_country=JP' },
+        { t: TEXTS.animeSection,     tk: 'animeSection',    u: '/discover/tv?with_genres=16&with_origin_country=JP&sort_by=popularity.desc&vote_count.gte=50',                                                   k: 'tv',    secId: 'sec-anime',  mixedCountry: 'with_genres=16&with_origin_country=JP', latestRules: true },
         { t: TEXTS.appleSection,     tk: 'appleSection',     u: `/discover/tv?with_networks=2552&sort_by=first_air_date.desc&first_air_date.lte=${today}`,                                      k: 'tv',    secId: 'sec-apple'    },
         { t: TEXTS.disneySection,    tk: 'disneySection',    u: `/discover/tv?with_networks=2739&sort_by=first_air_date.desc&first_air_date.lte=${today}`,                                      k: 'tv',    secId: 'sec-disney'   },
         { t: TEXTS.hboSection,       tk: 'hboSection',       u: `/discover/tv?with_networks=49&sort_by=first_air_date.desc&first_air_date.lte=${today}`,                                        k: 'tv',    secId: 'sec-hbo'      },
@@ -1436,6 +1442,10 @@ function _normBrowseEp(ep, mediaType) {
             sp.set('sort_by', 'first_air_date.desc');
             sp.set('first_air_date.lte', today);
         }
+    }
+    if (isAnimeQuery(sp)) {
+        sp.set('vote_count.gte', '50');
+        if (mediaType === 'movie') sp.set('with_release_type', '3|2');
     }
     if (!sp.has('vote_count.gte')) sp.set('vote_count.gte', '20');
     return CATALOG.discoverEndpoint(`${path}?${sp.toString()}`, mediaType, today);

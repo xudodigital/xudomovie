@@ -222,3 +222,23 @@ test('Every language has the short drama row, info row and unavailable labels', 
     for (const [locale, labels] of Object.entries(context.window.XUDO_I18N.TRANSLATIONS))
         for (const key of ['shortDramaSection', 'shortDramaInfoSection', 'shortDramaUnavailable']) assert.ok(labels[key], `${locale}:${key}`);
 });
+
+test('Anime uses the Latest Movies / Latest TV gates: 50+ votes and, for movies, a theatrical or digital release', async () => {
+    const { context } = loadApp();
+    const requested = [];
+    context.fetch = async url => { requested.push(url); return { ok: true, json: async () => ({ results: url.includes('/movie?') ? [movie] : [tv] }) }; };
+    await context.fetchMixedCountrySection({ mixedCountry: 'with_genres=16&with_origin_country=JP', t: 'Anime', latestRules: true }, cutoff);
+    const movieUrl = requested.find(url => url.includes('/discover/movie')), tvUrl = requested.find(url => url.includes('/discover/tv'));
+    assert.match(movieUrl, /vote_count\.gte=50/); assert.match(movieUrl, /with_release_type=3%7C2/);
+    assert.match(tvUrl, /vote_count\.gte=50/); assert.doesNotMatch(tvUrl, /with_release_type/);
+});
+
+test('Anime browse (both tabs) keeps the same gates; other country rows keep their own defaults', () => {
+    const { context } = loadApp();
+    const anime = '?with_genres=16&with_origin_country=JP&sort_by=popularity.desc&vote_count.gte=50';
+    const movieEp = context._normBrowseEp(`/discover/movie${anime}`, 'movie'), tvEp = context._normBrowseEp(`/discover/tv${anime}`, 'tv');
+    assert.match(movieEp, /vote_count\.gte=50/); assert.match(movieEp, /with_release_type=3%7C2/); assert.match(movieEp, /primary_release_date\.desc/);
+    assert.match(tvEp, /vote_count\.gte=50/); assert.doesNotMatch(tvEp, /with_release_type/);
+    const korean = context._normBrowseEp('/discover/movie?with_origin_country=KR&sort_by=popularity.desc', 'movie');
+    assert.match(korean, /vote_count\.gte=20/); assert.doesNotMatch(korean, /with_release_type/);
+});
