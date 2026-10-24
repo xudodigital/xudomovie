@@ -11,7 +11,7 @@ const tv = { id: 2, name: 'Aired TV', media_type: 'tv', first_air_date: '2020-01
 function loadApp(elements = {}) {
     const saved = new Map([['xudo_lang', 'en-US']]);
     const context = vm.createContext({
-        window: { location: { hostname: 'localhost', search: '' } }, URLSearchParams,
+        window: { location: { hostname: 'localhost', search: '' } }, URLSearchParams, AbortController, setTimeout, clearTimeout,
         localStorage: { getItem: k => saved.get(k) || null, setItem: (k, v) => saved.set(k, v), removeItem: k => saved.delete(k) },
         document: { addEventListener() {}, getElementById: id => elements[id] || null },
     });
@@ -241,4 +241,39 @@ test('Anime browse (both tabs) keeps the same gates; other country rows keep the
     assert.match(tvEp, /vote_count\.gte=50/); assert.doesNotMatch(tvEp, /with_release_type/);
     const korean = context._normBrowseEp('/discover/movie?with_origin_country=KR&sort_by=popularity.desc', 'movie');
     assert.match(korean, /vote_count\.gte=20/); assert.doesNotMatch(korean, /with_release_type/);
+});
+
+test('Availability gate hides only titles VidSrc reports as missing and fails open otherwise', async () => {
+    const { context } = loadApp();
+    const states = { 1: 'available', 2: 'unavailable', 3: 'unknown', 4: 'available' };
+    const asked = [];
+    context.window.XUDO_STREAM_AVAILABILITY = { check: async content => { asked.push(`${content.type}:${content.id}`); return { state: states[content.id] }; } };
+    const items = [1, 2, 3, 4].map(id => ({ ...movie, id }));
+    const kept = await context.filterAvailable(items, 'movie');
+    assert.deepEqual(Array.from(kept, i => i.id), [1, 3, 4]);
+    assert.deepEqual(asked.sort(), ['movie:1', 'movie:2', 'movie:3', 'movie:4']);
+    // TV items (and mixed anime items carrying media_type) are checked against the whole-series index.
+    asked.length = 0;
+    await context.filterAvailable([{ ...tv, id: 1 }, { ...movie, id: 4, media_type: 'movie' }], 'tv');
+    assert.deepEqual(asked.sort(), ['movie:4', 'show:1']);
+    // A mass 404 (index outage) must not empty the section.
+    context.window.XUDO_STREAM_AVAILABILITY = { check: async () => ({ state: 'unavailable' }) };
+    const many = Array.from({ length: 8 }, (_, i) => ({ ...movie, id: 100 + i }));
+    assert.equal((await context.filterAvailable(many, 'movie')).length, 8);
+    assert.equal((await context.filterAvailable(many.slice(0, 3), 'movie')).length, 0);
+    // No client available: nothing is filtered.
+    delete context.window.XUDO_STREAM_AVAILABILITY;
+    assert.equal((await context.filterAvailable(items, 'movie')).length, 4);
+});
+
+test('Availability checks that outlive their time budget count as unknown, not missing', async () => {
+    const { context } = loadApp();
+    context.window.XUDO_STREAM_AVAILABILITY = { check: (content, { signal }) => new Promise(resolve => signal.addEventListener('abort', () => resolve({ state: 'unknown' }))) };
+    const kept = await context.filterAvailable([{ ...movie, id: 1 }, { ...movie, id: 2 }], 'movie', { budget: 20 });
+    assert.equal(kept.length, 2);
+});
+
+test('Only Latest Movies, Latest TV Shows and Anime use the availability gate', () => {
+    const { context } = loadApp();
+    assert.deepEqual([...vm.runInContext('AVAILABILITY_GATE_KEYS', context)].sort(), ['animeSection', 'latestTvSection', 'movPopular']);
 });

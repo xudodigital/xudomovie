@@ -151,7 +151,7 @@ let currentSortBy = 'popularity.desc';
 // Legacy TMDB discovery: "micro drama" OR "vertical drama".
 // Links use watch.html?info=1 for metadata display.
 const SHORT_DRAMA_ENDPOINT = '/discover/tv?with_keywords=383994%7C356983&sort_by=popularity.desc';
-let browseInfoOnly = false;
+let browseInfoOnly = false, browseAvailabilityGate = false;
 let watchInfoOnly = false;
 let _watchMetadata = null;
 let _activePlayback = null;
@@ -1247,6 +1247,32 @@ const LATEST_MOVIE_RULES = '&vote_count.gte=50&with_release_type=3%7C2';
 const LATEST_TV_RULES = '&vote_count.gte=50';
 const isAnimeQuery = params => params.get('with_genres') === '16' && params.get('with_origin_country') === 'JP';
 
+// Latest-style sections hide titles that VidSrc's index reports as missing (404) until they are added.
+// Fail-open: unknown results (network errors, timeouts, an index outage) never hide anything.
+const AVAILABILITY_GATE_KEYS = new Set(['movPopular', 'latestTvSection', 'animeSection']);
+
+async function filterAvailable(items, defaultType, { concurrency = 6, budget = 4000 } = {}) {
+    const availability = window.XUDO_STREAM_AVAILABILITY;
+    if (!availability || !items.length) return items;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), budget);
+    const states = new Array(items.length);
+    let next = 0;
+    async function worker() {
+        while (next < items.length) {
+            const index = next++, item = items[index];
+            const type = item.media_type || defaultType;
+            const result = await availability.check({ type: type === 'tv' ? 'show' : 'movie', id: item.id }, { signal: controller.signal });
+            states[index] = result?.state;
+        }
+    }
+    try { await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker)); }
+    finally { clearTimeout(timer); }
+    const kept = items.filter((_, index) => states[index] !== 'unavailable');
+    // Every title reported missing at once points at the index, not the catalogue: show the originals.
+    return !kept.length && items.length >= 8 ? items : kept;
+}
+
 async function fetchMixedCountrySection(s, today) {
     const [movieSettled, tvSettled] = await Promise.allSettled([
         fetch(`${BASE_URL}${CATALOG.discoverEndpoint(`/discover/movie?${s.mixedCountry}&sort_by=primary_release_date.desc${s.latestRules ? LATEST_MOVIE_RULES : ''}`, 'movie', today)}&language=${CURRENT_LANG}`),
@@ -1297,10 +1323,10 @@ async function loadAllSections() {
     const main = document.getElementById('main-content');
     const today = CATALOG.today(); // "YYYY-MM-DD", computed at call time
     const sections = [
-        { t: TEXTS.movPopular,       tk: 'movPopular',       u: `/discover/movie?sort_by=primary_release_date.desc&primary_release_date.lte=${today}&vote_count.gte=50&with_release_type=3%7C2`, k: 'movie', secId: 'sec-latest',    postFilter: r => !!r.poster_path },
-        { t: TEXTS.latestTvSection,  tk: 'latestTvSection',  u: `/discover/tv?sort_by=first_air_date.desc&first_air_date.lte=${today}&vote_count.gte=50`,                                       k: 'tv',    secId: 'sec-latest-tv', postFilter: r => !!r.poster_path },
+        { t: TEXTS.movPopular,       tk: 'movPopular',       u: `/discover/movie?sort_by=primary_release_date.desc&primary_release_date.lte=${today}&vote_count.gte=50&with_release_type=3%7C2`, k: 'movie', secId: 'sec-latest',    availabilityGate: true, postFilter: r => !!r.poster_path },
+        { t: TEXTS.latestTvSection,  tk: 'latestTvSection',  u: `/discover/tv?sort_by=first_air_date.desc&first_air_date.lte=${today}&vote_count.gte=50`,                                       k: 'tv',    secId: 'sec-latest-tv', availabilityGate: true, postFilter: r => !!r.poster_path },
         { t: TEXTS.shortDramaSection, serial: true, secId: 'sec-short-drama' },
-        { t: TEXTS.animeSection,     tk: 'animeSection',    u: '/discover/tv?with_genres=16&with_origin_country=JP&sort_by=popularity.desc&vote_count.gte=50',                                                   k: 'tv',    secId: 'sec-anime',  mixedCountry: 'with_genres=16&with_origin_country=JP', latestRules: true },
+        { t: TEXTS.animeSection,     tk: 'animeSection',    u: '/discover/tv?with_genres=16&with_origin_country=JP&sort_by=popularity.desc&vote_count.gte=50',                                                   k: 'tv',    secId: 'sec-anime',  mixedCountry: 'with_genres=16&with_origin_country=JP', latestRules: true, availabilityGate: true },
         { t: TEXTS.appleSection,     tk: 'appleSection',     u: `/discover/tv?with_networks=2552&sort_by=first_air_date.desc&first_air_date.lte=${today}`,                                      k: 'tv',    secId: 'sec-apple'    },
         { t: TEXTS.disneySection,    tk: 'disneySection',    u: `/discover/tv?with_networks=2739&sort_by=first_air_date.desc&first_air_date.lte=${today}`,                                      k: 'tv',    secId: 'sec-disney'   },
         { t: TEXTS.hboSection,       tk: 'hboSection',       u: `/discover/tv?with_networks=49&sort_by=first_air_date.desc&first_air_date.lte=${today}`,                                        k: 'tv',    secId: 'sec-hbo'      },
@@ -1317,12 +1343,18 @@ async function loadAllSections() {
             catch (_) { return { ...source, results: [] }; }
         }
         const s = { ...source, u: CATALOG.discoverEndpoint(source.u, source.k, today) };
-        if (s.mixedCountry) return fetchMixedCountrySection(s, today);
-        const sep = s.u.includes('?') ? '&' : '?';
-        const res = await fetch(`${BASE_URL}${s.u}${sep}language=${CURRENT_LANG}`);
-        if (!res.ok) throw new Error(`Section ${s.t} failed`);
-        const d = await res.json();
-        return { ...s, results: d.results };
+        let section;
+        if (s.mixedCountry) section = await fetchMixedCountrySection(s, today);
+        else {
+            const sep = s.u.includes('?') ? '&' : '?';
+            const res = await fetch(`${BASE_URL}${s.u}${sep}language=${CURRENT_LANG}`);
+            if (!res.ok) throw new Error(`Section ${s.t} failed`);
+            const d = await res.json();
+            section = { ...s, results: d.results };
+        }
+        if (!s.availabilityGate) return section;
+        const eligible = CATALOG.filter(section.results, s.k, today).filter(r => !s.postFilter || s.postFilter(r));
+        return { ...section, results: await filterAvailable(eligible, s.k) };
     });
 
     const settled = await Promise.allSettled(promises);
@@ -1359,6 +1391,7 @@ async function initBrowse() {
     const title    = (titleKey && TEXTS[titleKey]) || sanitizeHTML(params.get('title') || '');
     const type     = params.get('type');
     browseInfoOnly = params.get('info') === '1' && type === 'tv';
+    browseAvailabilityGate = AVAILABILITY_GATE_KEYS.has(titleKey);
     trackPageView(`${title || 'Browse'} | XUDOMovie`, window.location.pathname + window.location.search);
 
     if (type === 'shortdrama') {
@@ -1545,7 +1578,9 @@ async function loadBrowseContent() {
 
         if (currentPage === 1) document.getElementById('browse-grid').innerHTML = '';
         document.getElementById('browse-grid').insertAdjacentHTML('beforeend',
-            CATALOG.filter(d.results, currentMediaType).filter(i => i.poster_path)
+            (browseAvailabilityGate
+                ? await filterAvailable(CATALOG.filter(d.results, currentMediaType).filter(i => i.poster_path), currentMediaType)
+                : CATALOG.filter(d.results, currentMediaType).filter(i => i.poster_path))
                 .map(i => createCardHTML(browseInfoOnly ? { ...i, _info: true } : i, currentMediaType)).join('')
         );
 

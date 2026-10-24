@@ -46,10 +46,10 @@
                     target({ type: 'tv', id: data.tmdb_id, season: data.season, episode: data.episode })?.path === query.path)) {
                     result = { state: 'available', quality: qualities.has(data.quality) ? data.quality : '' };
                 } else return unknown;
-                // Bounded, in-memory cache only. Network errors never become "not available".
+                // Cache verified availability states in bounded memory; errors remain retryable.
                 cache.delete(query.path);
                 cache.set(query.path, { at: now(), result });
-                if (cache.size > 100) cache.delete(cache.keys().next().value);
+                if (cache.size > 400) cache.delete(cache.keys().next().value);
                 return { ...result };
             } catch (_) { return unknown; }
             finally { cancel(timer); signal?.removeEventListener('abort', abort); }
