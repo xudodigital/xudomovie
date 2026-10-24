@@ -8,7 +8,7 @@ const root = path.resolve(__dirname, '..');
 
 function loadPlayer(search = '?type=movie&id=27205', language = 'en-US') {
     const stored = new Map([['xudo_lang', language]]);
-    const player = { frames: [], appendChild(frame) { this.frames.push(frame); } };
+    const player = { frames: [], appendChild(frame) { this.frames.push(frame); }, insertAdjacentHTML() {}, querySelector() { return null; } };
     const buttons = Array.from({ length: 6 }, (_, index) => ({
         dataset: { server: String(index + 1) },
         active: index === 0,
@@ -19,7 +19,7 @@ function loadPlayer(search = '?type=movie&id=27205', language = 'en-US') {
     const audioButton = { active: true, classList: { toggle() { audioButton.active = false; } } };
     const context = vm.createContext({
         window: { location: { hostname: 'localhost', search } },
-        URLSearchParams,
+        URLSearchParams, setTimeout: () => 0, clearTimeout() {},
         localStorage: {
             getItem: key => stored.get(key) || null,
             setItem: (key, value) => stored.set(key, value),

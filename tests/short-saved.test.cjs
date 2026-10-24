@@ -19,7 +19,7 @@ test('Favourites are keyed by id and type, so a DramaTap id never matches a movi
     assert.equal(context.isFavorite(123, 'movie'), true);
     assert.equal(context.isFavorite('123', 'shortdrama'), false);
     assert.equal(context.isFavorite(7, 'tv'), true); // legacy entries without a type still match
-    const button = { classList: { toggle() {} }, innerHTML: '' };
+    const button = { classList: { toggle() {} }, setAttribute() {}, innerHTML: '' };
     context.toggleFavoriteCore('123', 'shortdrama', 'Captain Drama', drama.poster, '', '', button, { episodes: 50 });
     const favs = JSON.parse(saved.get('xudo_favs'));
     assert.equal(favs.length, 3);

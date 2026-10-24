@@ -64,7 +64,7 @@ const GLOBAL_FOOTER_CONTENT = `
                 <div style="font-weight:700; font-size:0.9rem;">${_ft.findUsOn}</div>
                 <div style="font-size:0.75rem; color:#ccc; display:flex; align-items:center; gap:5px; margin-top:3px;">
                     4.5 ${ICON_STAR}
-                    <span style="color:#666">• ${_ft.downloads}</span>
+                    <span style="color:#9a9a9a">• ${_ft.downloads}</span>
                 </div>
             </div>
             <div class="sk-dl-group">

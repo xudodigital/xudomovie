@@ -18,14 +18,18 @@
         <title>Browse - XUDOMovie</title>
         <meta name="robots" content="noindex, nofollow">
         <link rel="canonical" href="https://xudomovie.us/">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="preconnect" href="https://image.tmdb.org">
+        <link rel="preconnect" href="https://flagcdn.com">
         <link href="https://fonts.googleapis.com/css2?family=Saira:wght@300;400;600;700&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="css/style.css?v=46">
+        <link rel="stylesheet" href="css/style.css?v=53">
         <link rel="icon" href="icon.svg" type="image/svg+xml">
     </head>
     <body>
         <div id="global-header-placeholder"></div>
         <div class="media-grid-container">
-            <h2 class="page-title" id="page-title">Loading...</h2>
+            <h1 class="page-title" id="page-title">Loading...</h1>
             <div id="genre-list" class="genre-scroll"></div>
             <div class="media-grid" id="browse-grid"></div>
             <div class="load-more-container">
@@ -49,18 +53,18 @@
             </svg>
         </button>
         <div id="global-footer-placeholder"></div>
-        <script src="js/i18n/translations.js?v=19"></script>
-        <script src="js/global-header.js"></script>
-        <script src="js/global-footer.js"></script>
+        <script src="js/i18n/translations.js?v=20"></script>
+        <script src="js/global-header.js?v=2"></script>
+        <script src="js/global-footer.js?v=2"></script>
         <script src="js/player-progress.js?v=5"></script>
         <script src="js/catalog-policy.js?v=1"></script>
-        <script src="js/stream-availability.js?v=2"></script>
-        <script src="js/short-serial.js?v=20"></script>
-        <script src="js/main.js?v=49"></script>
-        <script src="js/visitor-counter.js" defer></script>
+        <script src="js/stream-availability.js?v=3"></script>
+        <script src="js/short-serial.js?v=21"></script>
+        <script src="js/main.js?v=50"></script>
+        <script src="js/visitor-counter.js?v=2" defer></script>
         <div id="trailer-modal" class="trailer-modal">
             <div class="trailer-content">
-                <span class="close-trailer" onclick="window.closeTrailer()">&times;</span>
+                <button type="button" class="close-trailer" onclick="window.closeTrailer()" aria-label="Close trailer">&times;</button>
                 <div id="trailer-video-container" style="width:100%; height:100%;"></div>
             </div>
         </div>

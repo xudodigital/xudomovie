@@ -115,10 +115,10 @@ function loadStatus(language = 'id-ID') {
     const ids = ['stream-availability', 'stream-availability-title', 'stream-availability-context', 'stream-availability-status',
         'stream-availability-note', 'stream-availability-retry'];
     const elements = Object.fromEntries(ids.map(id => [id, { dataset: {}, hidden: false, textContent: '' }]));
-    const player = { frames: [], appendChild(frame) { this.frames.push(frame); } };
+    const player = { frames: [], appendChild(frame) { this.frames.push(frame); }, insertAdjacentHTML() {}, querySelector() { return null; } };
     elements['player-container'] = player;
     const context = vm.createContext({ window: { location: { hostname: 'localhost', search: '?type=tv&id=1396' } },
-        URLSearchParams, AbortController, localStorage: { getItem: key => key === 'xudo_lang' ? language : null },
+        URLSearchParams, AbortController, setTimeout: () => 0, clearTimeout() {}, localStorage: { getItem: key => key === 'xudo_lang' ? language : null },
         document: { addEventListener() {}, getElementById: id => elements[id] || null,
             createElement: () => ({ style: {}, setAttribute() {}, addEventListener() {} }), querySelectorAll: () => [] },
     });

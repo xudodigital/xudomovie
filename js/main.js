@@ -14,6 +14,7 @@ const CONFIG = {
 
 const BASE_URL   = '/api/tmdb';
 const IMG_HD     = 'https://image.tmdb.org/t/p/original';
+const IMG_HERO   = 'https://image.tmdb.org/t/p/w1280';  // hero backdrops: ~10x lighter than /original
 const IMG_POSTER = 'https://image.tmdb.org/t/p/w500';
 const IMG_THUMB  = 'https://image.tmdb.org/t/p/w92';
 const IMG_STILL  = 'https://image.tmdb.org/t/p/w300';
@@ -23,6 +24,9 @@ const CATALOG = window.XUDO_CATALOG;
 const TRANSLATIONS = window.XUDO_I18N.TRANSLATIONS; // moved to js/i18n/translations.js (single source of truth)
 
 const TEXTS = TRANSLATIONS[CURRENT_LANG] || TRANSLATIONS['en-US'];
+
+// Fills {name} placeholders in translated strings.
+const fmt = (template, values = {}) => String(template).replace(/\{(\w+)\}/g, (match, key) => key in values ? values[key] : match);
 
 function trackEvent(eventName, params = {}) {
     try {
@@ -418,11 +422,28 @@ function initSearchEvents() {
         const query = e.target.value.trim();
         cancelLiveSearch();
         drop.classList.remove('active');
-        if (query.length < 2) { drop.classList.remove('active'); return; }
+        if (query.length < 2) return;
         searchDebounceTimer = setTimeout(() => fetchLiveSearch(query), 300);
     });
 
-    input.addEventListener('keypress', (e) => { if (e.key === 'Enter') executeSearch(); });
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-controls', 'search-dropdown');
+    input.setAttribute('aria-expanded', 'false');
+    new MutationObserver(() => input.setAttribute('aria-expanded', String(drop.classList.contains('active'))))
+        .observe(drop, { attributes: true, attributeFilter: ['class'] });
+
+    const suggestionLinks = () => [...drop.querySelectorAll('a[href]')];
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); executeSearch(); return; }
+        if (e.key === 'ArrowDown' && drop.classList.contains('active')) { e.preventDefault(); suggestionLinks()[0]?.focus(); }
+    });
+    drop.addEventListener('keydown', (e) => {
+        const links = suggestionLinks(), index = links.indexOf(document.activeElement);
+        if (e.key === 'ArrowDown') { e.preventDefault(); links[Math.min(index + 1, links.length - 1)]?.focus(); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); if (index <= 0) input.focus(); else links[index - 1].focus(); }
+        else if (e.key === 'Escape') { drop.classList.remove('active'); input.focus(); }
+    });
 
     document.addEventListener('click', (e) => {
         if (!document.querySelector('.search-wrapper').contains(e.target)) {
@@ -529,8 +550,15 @@ async function fetchLiveSearch(query) {
     cancelLiveSearch();
     const version = liveSearchVersion;
     liveSearchController = new AbortController();
+    // Only show the loading row when the answer is not instant, so quick searches do not flash.
+    const loadingTimer = setTimeout(() => {
+        if (version !== liveSearchVersion) return;
+        dropdown.innerHTML = `<div class="search-state" role="status">${sanitizeHTML(TEXTS.loading)}</div>`;
+        dropdown.classList.add('active');
+    }, 250);
     try {
         const data = await fetchSearchSources(query, 1, { signal: liveSearchController.signal, timeout: 5000 });
+        clearTimeout(loadingTimer);
         if (version !== liveSearchVersion || liveSearchController.signal.aborted) return;
         const seenIds = new Set();
         const results = data.media.results || [];
@@ -554,7 +582,11 @@ async function fetchLiveSearch(query) {
         });
 
         const topMedia = mediaItems.slice(0, 6), topPersons = personItems.slice(0, 2), topDramas = data.dramas.slice(0, 3);
-        if (!topMedia.length && !topPersons.length && !topDramas.length) { dropdown.classList.remove('active'); return; }
+        if (!topMedia.length && !topPersons.length && !topDramas.length) {
+            dropdown.innerHTML = `<div class="search-state" role="status">${sanitizeHTML(fmt(TEXTS.searchEmpty, { q: query }))}</div>`;
+            dropdown.classList.add('active');
+            return;
+        }
         let html = '';
 
         html += topPersons.map(p => {
@@ -565,9 +597,9 @@ async function fetchLiveSearch(query) {
                 <img src="${photo}" alt="${name}" style="border-radius:50%;width:40px;height:40px;object-fit:cover;">
                 <div class="search-item-info" style="flex:1;">
                     <span class="search-item-title">${name}</span>
-                    <span class="search-item-meta">${dept} · VIEW FILMOGRAPHY</span>
+                    <span class="search-item-meta">${dept} · ${sanitizeHTML(TEXTS.viewFilmography)}</span>
                 </div>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
             </a>`;
         }).join('');
 
@@ -578,13 +610,13 @@ async function fetchLiveSearch(query) {
             const targetLink = getTargetUrl(i);
             return `<div class="search-item">
                 <a href="${targetLink}" class="search-item-link">
-                    <img src="${poster}" alt="${title}">
+                    <img src="${poster}" alt="" width="40" height="60" decoding="async">
                     <div class="search-item-info">
                         <span class="search-item-title">${title}</span>
                         <span class="search-item-meta">${year} · ${i.media_type === 'movie' ? TEXTS.typeMovie : TEXTS.typeTv}</span>
                     </div>
                 </a>
-                <button class="search-fav-btn ${isFavorite(i.id, i.media_type) ? 'active' : ''}"
+                <button class="search-fav-btn ${isFavorite(i.id, i.media_type) ? 'active' : ''}" type="button" aria-label="${sanitizeHTML(TEXTS.myFavorites)}: ${title}" aria-pressed="${isFavorite(i.id, i.media_type)}"
                     onclick="toggleFavoriteCore(${i.id},'${i.media_type}','${title.replace(/'/g,"\\'")}','${(IMG_POSTER+i.poster_path).replace(/'/g,"\\'")}','${year}','${i.vote_average?i.vote_average.toFixed(1):'NR'}',this)">
                     ${isFavorite(i.id, i.media_type) ? '❤️' : '🤍'}
                 </button>
@@ -594,11 +626,15 @@ async function fetchLiveSearch(query) {
         html += [...mediaHTML.slice(0, 3), ...dramaHTML, ...mediaHTML.slice(3)].join('');
 
 
-        html += `<a href="index.html?search=${encodeURIComponent(query)}" class="search-see-all">See all results for "<strong>${sanitizeHTML(query)}</strong>" ›</a>`;
+        html += `<a href="index.html?search=${encodeURIComponent(query)}" class="search-see-all">${sanitizeHTML(fmt(TEXTS.searchSeeAll, { q: query }))} ›</a>`;
         dropdown.innerHTML = html;
         dropdown.classList.add('active');
     } catch (_) {
-        if (version === liveSearchVersion) dropdown.classList.remove('active');
+        clearTimeout(loadingTimer);
+        if (version !== liveSearchVersion) return;
+        dropdown.innerHTML = `<div class="search-state search-state-error" role="alert"><span>${sanitizeHTML(TEXTS.searchUnavailable)}</span><button type="button" class="search-retry">${sanitizeHTML(TEXTS.sdRetry)}</button></div>`;
+        dropdown.classList.add('active');
+        dropdown.querySelector('.search-retry').onclick = () => fetchLiveSearch(query);
     }
 }
 
@@ -649,7 +685,7 @@ async function performSearch(q, append = false) {
         });
         if (!append) {
             const title = main.querySelector('.page-title');
-            if (title) title.textContent = `Results for: "${q}"`;
+            if (title) title.textContent = fmt(TEXTS.searchResultsFor, { q });
         }
         if (!append && personItems.length) {
             const actors = document.getElementById('actor-cards-container');
@@ -668,7 +704,7 @@ async function performSearch(q, append = false) {
         if (searchAllItems.length) {
             const sort = document.getElementById('search-sort-bar'); if (sort) sort.style.display = 'flex';
             renderSearchGrid(searchAllItems);
-        } else if (!append) grid.innerHTML = '<div class="no-results">No results found.</div>';
+        } else if (!append) grid.innerHTML = `<div class="no-results" role="status">${sanitizeHTML(fmt(TEXTS.searchEmpty, { q }))}</div>`;
         const notice = document.getElementById('search-source-notice');
         if (notice) { notice.hidden = !searchHasPartialResults; notice.textContent = TEXTS.searchPartialResults || 'Some search results are temporarily unavailable. Please try again.'; }
         const more = document.getElementById('search-load-more');
@@ -685,10 +721,16 @@ async function performSearch(q, append = false) {
         return true;
     } catch (_) {
         if (generation !== searchGeneration) return false;
-        const message = TEXTS.searchPartialResults || 'Search is temporarily unavailable. Please try again.';
+        const message = TEXTS.searchUnavailable;
         const notice = document.getElementById('search-source-notice');
         if (append && notice) { notice.hidden = false; notice.textContent = message; }
-        else { const grid = document.getElementById('search-grid'); if (grid) grid.innerHTML = `<div class="no-results">${sanitizeHTML(message)}</div>`; }
+        else {
+            const grid = document.getElementById('search-grid');
+            if (grid) {
+                grid.innerHTML = `<div class="no-results" role="alert"><p>${sanitizeHTML(message)}</p><button type="button" class="load-more-btn search-retry">${sanitizeHTML(TEXTS.sdRetry)}</button></div>`;
+                grid.querySelector('.search-retry').onclick = () => performSearch(searchQuery || q);
+            }
+        }
         return false;
     }
 }
@@ -788,15 +830,15 @@ function createCardHTML(item, typeOverride) {
     }
 
     return `
-        <div class="content-card" data-href="${targetLink}" data-id="${item.id}" data-type="${t}" role="button" tabindex="0">
-            <button class="card-fav-btn ${isFav ? 'active' : ''}"
+        <div class="content-card" data-href="${targetLink}" data-id="${item.id}" data-type="${t}" role="button" tabindex="0" aria-label="${title} (${year})">
+            <button class="card-fav-btn ${isFav ? 'active' : ''}" type="button" aria-label="${TEXTS.myFavorites}: ${title}" aria-pressed="${isFav}"
                 data-fav-id="${item.id}" data-fav-type="${t}"
                 data-fav-title="${encodeURIComponent(title)}"
                 data-fav-poster="${encodeURIComponent(poster)}"
                 data-fav-year="${year}" data-fav-rating="${rating}">
                 ${favIcon}
             </button>
-            <img src="${poster}" alt="${title} (${year}) Full ${mediaTypeLabel} Review & Details"
+            <img src="${poster}" alt="" width="160" height="240" decoding="async"
                  loading="lazy" onerror="this.onerror=null;this.src='${fallbackImage}';">
             <span class="card-rating">★ ${rating}</span>
             <span class="card-quality" hidden></span>
@@ -873,6 +915,15 @@ function attachCardDelegation(containerSelector) {
         : containerSelector;
     if (!container) return;
 
+    // Cards are role="button": Enter/Space opens them like a click (but never steals the favourite button's keys).
+    container.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const card = e.target.closest('.content-card[data-href]');
+        if (!card || e.target !== card) return;
+        e.preventDefault();
+        card.click();
+    });
+
     container.addEventListener('click', (e) => {
         const card = e.target.closest('.content-card');
         if (!card) return;
@@ -923,6 +974,7 @@ function updateButtonState(btn, type, active) {
             : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
     }
     btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', String(active));
 }
 
 async function initHome() {
@@ -1003,9 +1055,9 @@ async function loadHeroSlider() {
             const logoUrl  = logo ? `https://image.tmdb.org/t/p/w500${logo.file_path}` : null;
             const titleHTML = logoUrl
                 ? `<img class="hero-logo" src="${logoUrl}" alt="${title}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">`
-                  + `<h1 class="hero-title" style="display:none">${title}</h1>`
-                : `<h1 class="hero-title">${title}</h1>`;
-            return `<a href="${link}" class="hero-slide" data-id="${i.id}" data-type="${i.media_type}" style="background-image:url('${IMG_HD + i.backdrop_path}')">
+                  + `<h2 class="hero-title" style="display:none">${title}</h2>`
+                : `<h2 class="hero-title">${title}</h2>`;
+            return `<a href="${link}" class="hero-slide" data-id="${i.id}" data-type="${i.media_type}" data-bg="${IMG_HERO + i.backdrop_path}">
                 <div class="hero-video-preview"></div>
                 <div class="hero-content">
                     <div class="hero-tag">${mediaTag}</div>
@@ -1026,6 +1078,11 @@ async function loadHeroSlider() {
         };
 
         container.innerHTML = [enriched[enriched.length - 1], ...enriched, enriched[0]].map(buildSlide).join('');
+        // Only the visible slide loads its backdrop right away; the rest follow once the page is idle.
+        const paintSlide = slide => { if (slide.dataset.bg) { slide.style.backgroundImage = `url('${slide.dataset.bg}')`; delete slide.dataset.bg; } };
+        const heroSlides = [...container.querySelectorAll('.hero-slide')];
+        paintSlide(heroSlides[1] || heroSlides[0]);
+        setTimeout(() => heroSlides.forEach(paintSlide), 1200);
 
         if (dots) {
             dots.innerHTML = enriched.map((_, i) => `<div class="dot ${i === 0 ? 'active' : ''}" data-index="${i}"></div>`).join('');
@@ -1765,8 +1822,15 @@ async function initWatchPage() {
     }
     currentSeason  = parseInt(p.get('s')) || 1;
     currentEpisode = parseInt(p.get('e')) || 1;
+    const validServer = value => Number.isInteger(value) && value >= 1 && value <= 6;
     const requestedServer = Number(p.get('server'));
-    currentServer = Number.isInteger(requestedServer) && requestedServer >= 1 && requestedServer <= 6 ? requestedServer : 1;
+    let preferredServer = 0;
+    try { preferredServer = Number(localStorage.getItem('xudo_server')); } catch (_) {}
+    // An explicit ?server= wins; otherwise reuse the server the visitor last chose by hand.
+    currentServer = validServer(requestedServer) ? requestedServer : validServer(preferredServer) ? preferredServer : 1;
+    const serverLabel = document.querySelector('#server-selector .server-label');
+    if (serverLabel) serverLabel.textContent = TEXTS.serverLabel;
+    document.getElementById('server-selector')?.setAttribute('aria-label', TEXTS.serverLabel);
     syncServerButtons();
     if (!id || !type) return (window.location.href = 'index.html');
     window.addEventListener('message', onPlayerProgress);
@@ -1806,12 +1870,17 @@ async function initWatchPage() {
     if (type === 'tv' && !watchInfoOnly) {
         const c = document.getElementById('tv-controls');
         if (c) c.style.display = 'block';
-        await loadTVSeasons(id);
+        initEpisodeNav(id);
     }
-    await fetchMovieDetails(type, id);
-    await fetchCertification(type, id);
-    await fetchCast(type, id);
-    await fetchSimilarMovies(type, id);
+    // These requests do not depend on each other, so they run together instead of one after another.
+    await Promise.allSettled([
+        type === 'tv' && !watchInfoOnly ? loadTVSeasons(id) : null,
+        fetchMovieDetails(type, id),
+        fetchCertification(type, id),
+        fetchCast(type, id),
+        fetchSimilarMovies(type, id),
+    ]);
+    initPlayerRecovery(type, id);
 }
 
 // Render the metadata view for legacy info=1 links.
@@ -1929,7 +1998,8 @@ function updatePlayer(type, id) {
     const el = document.getElementById('player-container');
     if (!el) return;
 
-    el.innerHTML = '<div style="display:grid;place-items:center;height:100%;background:#000;color:#fff"><div class="loader">Loading Player...</div></div>';
+    clearTimeout(playerLoadTimer);
+    el.innerHTML = playerStatusHTML('loading');
 
     _activePlayback = null;
     _latestPlaybackProgress = null;
@@ -1984,10 +2054,48 @@ function updatePlayer(type, id) {
         trackEvent('player_error', { server: currentServer, content_type: type, content_id: id });
     }, { once: true });
 
+    // Keep the status overlay above the frame until the embed reports it has loaded.
     el.innerHTML = '';
     el.appendChild(iframe);
+    el.insertAdjacentHTML('beforeend', playerStatusHTML('loading'));
+    iframe.addEventListener('load', () => { clearTimeout(playerLoadTimer); el.querySelector('.player-status')?.remove(); }, { once: true });
+    playerLoadTimer = setTimeout(() => {
+        const status = el.querySelector('.player-status');
+        if (status) status.outerHTML = playerStatusHTML('slow');
+        bindPlayerStatusActions(el, type, id);
+    }, PLAYER_SLOW_MS);
     if (supportsPlaybackProgress()) _activePlayback = { ...content, server: currentServer, frame: iframe };
     updateRestartAction(_activePlayback ? window.XUDO_PLAYBACK.get(content) : null);
+}
+
+const PLAYER_SLOW_MS = 12000;
+let playerLoadTimer = 0;
+
+function playerStatusHTML(state) {
+    if (state === 'loading') return `<div class="player-status" role="status"><span class="player-spinner" aria-hidden="true"></span><span>${sanitizeHTML(TEXTS.playerLoading)}</span></div>`;
+    const next = currentServer % 6 + 1;
+    return `<div class="player-status player-status-slow" role="alert"><span>${sanitizeHTML(TEXTS.playerSlow)}</span>
+        <div class="player-status-actions"><button type="button" class="recovery-btn" data-recover="reload">${sanitizeHTML(TEXTS.playerReload)}</button>
+        <button type="button" class="recovery-btn recovery-primary" data-recover="next">${sanitizeHTML(fmt(TEXTS.playerNextServer, { n: next }))}</button></div></div>`;
+}
+
+function bindPlayerStatusActions(el, type, id) {
+    el.querySelector('[data-recover="reload"]')?.addEventListener('click', () => updatePlayer(type, id));
+    el.querySelector('[data-recover="next"]')?.addEventListener('click', () => changeServer(currentServer % 6 + 1));
+}
+
+// Always-available recovery row under the server buttons (reload, or jump to the next server).
+function initPlayerRecovery(type, id) {
+    const row = document.getElementById('player-recovery');
+    if (!row) return;
+    const reload = document.getElementById('player-reload'), next = document.getElementById('player-next-server');
+    const refresh = () => { next.textContent = fmt(TEXTS.playerNextServer, { n: currentServer % 6 + 1 }); };
+    reload.textContent = TEXTS.playerReload;
+    reload.onclick = () => updatePlayer(type, id);
+    next.onclick = () => { changeServer(currentServer % 6 + 1); refresh(); };
+    document.getElementById('server-selector')?.addEventListener('click', () => setTimeout(refresh));
+    refresh();
+    row.hidden = false;
 }
 
 function syncServerButtons() {
@@ -2001,6 +2109,7 @@ function syncServerButtons() {
 window.changeServer = function (serverNum) {
     if (!Number.isInteger(serverNum) || serverNum < 1 || serverNum > 6) return;
     currentServer = serverNum;
+    try { localStorage.setItem('xudo_server', String(serverNum)); } catch (_) {}
     trackEvent('server_select', { server_number: serverNum });
     syncServerButtons();
     const p = new URLSearchParams(window.location.search);
@@ -2008,6 +2117,50 @@ window.changeServer = function (serverNum) {
     if (type && id) updatePlayer(type, id);
     if (!supportsPlaybackProgress() && _watchMetadata) updateContinueWatching(_watchMetadata);
 };
+
+let seasonEpisodeNumbers = [], seasonNumbers = [], selectSeasonFn = null;
+
+function initEpisodeNav(id) {
+    const bar = document.getElementById('episode-nav');
+    if (!bar) return;
+    bar.hidden = false;
+    document.querySelector('#episode-prev span').textContent = TEXTS.sdPrevShort;
+    document.querySelector('#episode-next span').textContent = TEXTS.sdNextShort;
+    document.getElementById('episode-prev').setAttribute('aria-label', TEXTS.sdPrev);
+    document.getElementById('episode-next').setAttribute('aria-label', TEXTS.sdNext);
+    document.getElementById('episode-prev').onclick = () => stepEpisode(id, -1);
+    document.getElementById('episode-next').onclick = () => stepEpisode(id, 1);
+    updateEpisodeNav();
+}
+
+function updateEpisodeNav() {
+    const now = document.getElementById('episode-now');
+    if (!now) return;
+    const index = seasonEpisodeNumbers.indexOf(currentEpisode);
+    now.textContent = fmt(TEXTS.streamEpisode, { season: currentSeason, episode: currentEpisode });
+    document.getElementById('episode-prev').disabled = index <= 0;
+    document.getElementById('episode-next').disabled = !seasonEpisodeNumbers.length ||
+        (index >= seasonEpisodeNumbers.length - 1 && !seasonNumbers.includes(currentSeason + 1));
+}
+
+function stepEpisode(id, delta) {
+    const index = seasonEpisodeNumbers.indexOf(currentEpisode), target = index + delta;
+    if (target >= 0 && target < seasonEpisodeNumbers.length) return selectEpisodeNumber(id, seasonEpisodeNumbers[target]);
+    if (delta > 0 && selectSeasonFn && seasonNumbers.includes(currentSeason + 1)) selectSeasonFn(currentSeason + 1);
+}
+
+function selectEpisodeNumber(id, number) {
+    currentEpisode = number;
+    document.querySelectorAll('.ep-card').forEach(card => {
+        const active = Number(card.dataset.episode) === number;
+        card.classList.toggle('active', active);
+        if (active) card.setAttribute('aria-current', 'true'); else card.removeAttribute('aria-current');
+    });
+    trackEvent('select_episode', { content_id: id, season_number: currentSeason, episode_number: number });
+    updateEpisodeNav();
+    updatePlayer('tv', id);
+    if (!supportsPlaybackProgress() && _watchMetadata) saveWatchHistory(_watchMetadata);
+}
 
 async function loadTVSeasons(id) {
     const btn   = document.getElementById('season-dropdown-btn');
@@ -2041,12 +2194,14 @@ async function loadTVSeasons(id) {
         updatePlayer('tv', id);
         if (!supportsPlaybackProgress() && _watchMetadata) saveWatchHistory(_watchMetadata);
     }
+    selectSeasonFn = selectSeason;
 
     try {
         const res = await fetch(`${BASE_URL}/tv/${id}?language=${CURRENT_LANG}`);
         if (!res.ok) throw new Error('TV details failed');
         const d = await res.json();
         list.innerHTML = '';
+        seasonNumbers = d.seasons.filter(x => x.season_number > 0).map(x => x.season_number);
         d.seasons.forEach(x => {
             if (x.season_number > 0) {
                 const li = document.createElement('li');
@@ -2065,13 +2220,15 @@ async function loadTVSeasons(id) {
 
 async function loadEpisodesForSeason(id, sn) {
     const grid = document.getElementById('episodes-grid');
-    grid.innerHTML = '<div style="color:#888;font-size:0.85rem;padding:10px;">Loading episodes...</div>';
+    grid.innerHTML = `<div class="episodes-state" role="status">${sanitizeHTML(TEXTS.episodesLoading)}</div>`;
     try {
         const res = await fetch(`${BASE_URL}/tv/${id}/season/${sn}?language=${CURRENT_LANG}`);
         if (!res.ok) throw new Error(`Season ${sn} fetch failed`);
         const d = await res.json();
         grid.className = 'episodes-grid episodes-grid-rich';
         grid.innerHTML = '';
+        seasonEpisodeNumbers = d.episodes.map(ep => ep.episode_number);
+        updateEpisodeNav();
         const PLAY_ICON = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polygon points="5,3 19,12 5,21"/></svg>`;
         d.episodes.forEach(ep => {
             const thumb    = ep.still_path ? IMG_STILL + ep.still_path : '';
@@ -2082,10 +2239,15 @@ async function loadEpisodesForSeason(id, sn) {
 
             const card      = document.createElement('div');
             card.className  = `ep-card ${isActive ? 'active' : ''}`;
+            card.dataset.episode = ep.episode_number;
+            card.tabIndex = 0;
+            card.setAttribute('role', 'button');
+            card.setAttribute('aria-label', fmt(TEXTS.streamEpisode, { season: currentSeason, episode: ep.episode_number }) + ` — ${ep.name || ''}`);
+            if (isActive) card.setAttribute('aria-current', 'true');
             card.innerHTML  = `
                 <div class="ep-card-thumb${noImg ? ' ep-card-thumb--empty' : ''}">
                     ${thumb
-                        ? `<img src="${thumb}" alt="Episode ${ep.episode_number}" loading="lazy" onerror="this.style.display='none';this.parentElement.classList.add('ep-card-thumb--empty')">`
+                        ? `<img src="${thumb}" alt="" width="300" height="169" loading="lazy" decoding="async" onerror="this.style.display='none';this.parentElement.classList.add('ep-card-thumb--empty')">`
                         : ''}
                     <span class="ep-card-num">Ep ${ep.episode_number}</span>
                     <div class="ep-card-play">${PLAY_ICON}</div>
@@ -2095,19 +2257,19 @@ async function loadEpisodesForSeason(id, sn) {
                     ${epDate ? `<div class="ep-card-date">${epDate}</div>` : ''}
                 </div>
                 `;
-            card.addEventListener('click', () => {
-                currentEpisode = ep.episode_number;
-                document.querySelectorAll('.ep-card').forEach(x => x.classList.remove('active'));
-                card.classList.add('active');
-                trackEvent('select_episode', { content_id: id, season_number: currentSeason, episode_number: ep.episode_number, episode_title: ep.name || '' });
-                updatePlayer('tv', id);
-                if (!supportsPlaybackProgress() && _watchMetadata) saveWatchHistory(_watchMetadata);
+            card.addEventListener('click', () => selectEpisodeNumber(id, ep.episode_number));
+            card.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectEpisodeNumber(id, ep.episode_number); }
             });
             grid.appendChild(card);
         });
+        // Bring the current episode into view inside the scrolling list (not the whole page).
+        const activeCard = grid.querySelector('.ep-card.active');
+        if (activeCard) grid.scrollTop += activeCard.getBoundingClientRect().top - grid.getBoundingClientRect().top - 8;
     } catch (error) {
         console.error('Episodes load error:', error);
-        grid.innerHTML = '<span style="color:red;padding:10px;">Failed to load episodes.</span>';
+        grid.innerHTML = `<div class="episodes-state" role="alert"><span>${sanitizeHTML(TEXTS.episodesFailed)}</span><button type="button" class="recovery-btn">${sanitizeHTML(TEXTS.sdRetry)}</button></div>`;
+        grid.querySelector('button').onclick = () => loadEpisodesForSeason(id, sn);
     }
 }
 

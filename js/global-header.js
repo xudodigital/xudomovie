@@ -70,9 +70,9 @@ const GLOBAL_HEADER_CONTENT = `
             autocomplete="off"
             aria-label="Search movies, TV shows or short dramas"
         >
-        <button id="clear-btn" class="search-clear" aria-label="Clear search" title="Clear">✕</button>
-        <button class="search-btn" aria-label="Submit search">${ICON_SEARCH}</button>
-        <div id="search-dropdown" class="search-dropdown" role="listbox" aria-label="Search suggestions"></div>
+        <button id="clear-btn" class="search-clear" type="button" aria-label="Clear search" title="Clear">✕</button>
+        <button class="search-btn" type="button" aria-label="Submit search">${ICON_SEARCH}</button>
+        <div id="search-dropdown" class="search-dropdown" role="group" aria-label="Search suggestions"></div>
     </div>
 
     <!-- Right icons (right column) -->

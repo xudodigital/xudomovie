@@ -120,6 +120,8 @@ const FIREBASE_CONFIG = {
             <span class="visitor-dot"></span>
             <strong>${formatted}</strong><span class="visitor-label">&nbsp;${label}</span>
         `;
+        el.title = `${formatted} ${label}`;
+        el.setAttribute('role', 'status');
         el.style.display = 'flex';  // CSS sudah atur posisi (bottom/right/height) per breakpoint
     }
 
