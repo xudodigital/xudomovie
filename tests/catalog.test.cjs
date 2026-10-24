@@ -286,7 +286,7 @@ test('Availability checks that outlive their time budget count as unknown, not m
     assert.equal(kept.length, 2);
 });
 
-test('Only Latest Movies, Latest TV Shows and Anime use the availability gate', () => {
+test('Latest rows, Anime and the newer platform rows use the availability gate', () => {
     const { context } = loadApp();
-    assert.deepEqual([...vm.runInContext('AVAILABILITY_GATE_KEYS', context)].sort(), ['animeSection', 'latestTvSection', 'movPopular']);
+    assert.deepEqual([...vm.runInContext('AVAILABILITY_GATE_KEYS', context)].sort(), ['amcSection', 'animeSection', 'fxSection', 'hboMaxSection', 'huluSection', 'latestTvSection', 'movPopular', 'paramountSection', 'peacockSection', 'showtimeSection', 'starzSection']);
 });

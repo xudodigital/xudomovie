@@ -1310,7 +1310,7 @@ const isAnimeQuery = params => params.get('with_genres') === '16' && params.get(
 
 // Latest-style sections hide titles that VidSrc's index reports as missing (404) until they are added.
 // Fail-open: unknown results (network errors, timeouts, an index outage) never hide anything.
-const AVAILABILITY_GATE_KEYS = new Set(['movPopular', 'latestTvSection', 'animeSection']);
+const AVAILABILITY_GATE_KEYS = new Set(['movPopular', 'latestTvSection', 'animeSection', 'huluSection', 'paramountSection', 'peacockSection', 'hboMaxSection', 'showtimeSection', 'fxSection', 'amcSection', 'starzSection']);
 
 async function filterAvailable(items, defaultType, { concurrency = 6, budget = 4000 } = {}) {
     const availability = window.XUDO_STREAM_AVAILABILITY;
@@ -1393,6 +1393,14 @@ async function loadAllSections() {
         { t: TEXTS.hboSection,       tk: 'hboSection',       u: `/discover/tv?with_networks=49&sort_by=first_air_date.desc&first_air_date.lte=${today}`,                                        k: 'tv',    secId: 'sec-hbo'      },
         { t: TEXTS.netflixSection,   tk: 'netflixSection',   u: `/discover/tv?with_networks=213&sort_by=first_air_date.desc&first_air_date.lte=${today}`,                                       k: 'tv',    secId: 'sec-netflix'  },
         { t: TEXTS.primeSection,     tk: 'primeSection',     u: `/discover/tv?with_networks=1024&sort_by=first_air_date.desc&first_air_date.lte=${today}`,                                      k: 'tv',    secId: 'sec-prime'    },
+        { t: TEXTS.huluSection, tk: 'huluSection', u: `/discover/tv?with_networks=453&sort_by=first_air_date.desc&first_air_date.lte=${today}&vote_count.gte=50`, k: 'tv', secId: 'sec-hulu', availabilityGate: true },
+        { t: TEXTS.paramountSection, tk: 'paramountSection', u: `/discover/tv?with_networks=4330&sort_by=first_air_date.desc&first_air_date.lte=${today}&vote_count.gte=50`, k: 'tv', secId: 'sec-paramount', availabilityGate: true },
+        { t: TEXTS.peacockSection, tk: 'peacockSection', u: `/discover/tv?with_networks=3353&sort_by=first_air_date.desc&first_air_date.lte=${today}&vote_count.gte=50`, k: 'tv', secId: 'sec-peacock', availabilityGate: true },
+        { t: TEXTS.hboMaxSection, tk: 'hboMaxSection', u: `/discover/tv?with_networks=3186&sort_by=first_air_date.desc&first_air_date.lte=${today}&vote_count.gte=50`, k: 'tv', secId: 'sec-hbomax', availabilityGate: true },
+        { t: TEXTS.showtimeSection, tk: 'showtimeSection', u: `/discover/tv?with_networks=67&sort_by=first_air_date.desc&first_air_date.lte=${today}&vote_count.gte=50`, k: 'tv', secId: 'sec-showtime', availabilityGate: true },
+        { t: TEXTS.fxSection, tk: 'fxSection', u: `/discover/tv?with_networks=88&sort_by=first_air_date.desc&first_air_date.lte=${today}&vote_count.gte=50`, k: 'tv', secId: 'sec-fx', availabilityGate: true },
+        { t: TEXTS.amcSection, tk: 'amcSection', u: `/discover/tv?with_networks=174&sort_by=first_air_date.desc&first_air_date.lte=${today}&vote_count.gte=50`, k: 'tv', secId: 'sec-amc', availabilityGate: true },
+        { t: TEXTS.starzSection, tk: 'starzSection', u: `/discover/tv?with_networks=318&sort_by=first_air_date.desc&first_air_date.lte=${today}&vote_count.gte=50`, k: 'tv', secId: 'sec-starz', availabilityGate: true },
     ];
 
     const promises = sections.map(async (source) => {
