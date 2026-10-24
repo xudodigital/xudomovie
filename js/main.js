@@ -815,6 +815,10 @@ const CARD_QUALITY_CONCURRENCY = 4;
 const cardQualityQueue = [];
 let cardQualityObserver = null, cardQualityActive = 0;
 
+// VidSrc reports resolutions; the UI uses the standard names (1080p = Full HD, 720p = HD).
+const QUALITY_LABELS = { '1080p': 'FHD', '720p': 'HD' };
+const qualityLabel = quality => QUALITY_LABELS[quality] || quality;
+
 async function resolveCardQuality(card) {
     const badge = card.querySelector('.card-quality');
     const availability = window.XUDO_STREAM_AVAILABILITY;
@@ -822,7 +826,7 @@ async function resolveCardQuality(card) {
     let result;
     try { result = await availability.check({ type: card.dataset.type === 'tv' ? 'show' : 'movie', id: card.dataset.id }); } catch (_) { return; }
     if (result?.state !== 'available' || !result.quality) return;
-    badge.textContent = result.quality;
+    badge.textContent = qualityLabel(result.quality);
     badge.dataset.quality = result.quality;
     badge.hidden = false;
 }

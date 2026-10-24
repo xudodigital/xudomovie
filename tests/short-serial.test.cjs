@@ -155,3 +155,17 @@ test('Cards show a compact, localized views chip only when views are known', () 
     assert.match(html, /class="card-rating sd-views" title="7,233 views"/); assert.match(html, /7\.2K/);
     assert.doesNotMatch(api.card(base), /sd-views/); assert.doesNotMatch(api.card({ ...base, views: 0 }), /sd-views/);
 });
+test('Views route finds one drama\'s play count in the title search and caches it longer than the catalogue', async () => {
+    const hits = [], origin = { DRAMATAP_ORIGIN: 'https://views.example' };
+    await mockFetch(async url => { hits.push(new URL(url).searchParams.get('q')); return json({ items: [{ ...drama, id: 1, play: 5 }, { ...drama, id: 117426, play: 7233 }] }); }, async () => {
+        const response = await call('views', 'id=117426&q=Captain', origin);
+        assert.equal(response.status, 200); assert.equal(response.headers.get('Cache-Control'), 'public, max-age=3600');
+        assert.deepEqual(await response.json(), { provider: 'dramatap', id: '117426', views: 7233 });
+        assert.equal((await (await call('views', 'id=999&q=Captain', origin)).json()).views, 0); // not in the results
+    });
+    assert.deepEqual(hits, ['Captain', 'Captain']);
+    await mockFetch(async () => { throw new Error('must not fetch'); }, async () => {
+        assert.equal((await call('views', 'q=Captain')).status, 400); assert.equal((await call('views', 'id=1')).status, 400);
+        assert.equal((await call('views', `id=1&q=${'x'.repeat(101)}`)).status, 400);
+    });
+});

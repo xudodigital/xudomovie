@@ -148,6 +148,19 @@ test('Movie cards check the movie index and TV cards check the whole series', as
     assert.deepEqual(requests.map(r => r.type), ['movie', 'show']);
 });
 
+test('Quality badges use the standard names: 1080p is FHD, 720p is HD, other labels pass through', () => {
+    const { context } = loadApp();
+    assert.deepEqual(Array.from(vm.runInContext("['1080p', '720p', 'DVD', 'SD', 'CAM'].map(qualityLabel)", context)), ['FHD', 'HD', 'DVD', 'SD', 'CAM']);
+});
+
+test('Quality badge renders the FHD label while keeping the raw value for styling', async () => {
+    const { context } = loadApp();
+    const badge = { hidden: true, dataset: {}, textContent: '' };
+    context.window.XUDO_STREAM_AVAILABILITY = { check: async () => ({ state: 'available', quality: '1080p' }) };
+    await context.resolveCardQuality({ dataset: { id: '1' }, querySelector: () => badge });
+    assert.equal(badge.textContent, 'FHD'); assert.equal(badge.dataset.quality, '1080p'); assert.equal(badge.hidden, false);
+});
+
 test('Quality badge shows only a verified quality and stays hidden otherwise', async () => {
     const { context } = loadApp();
     const cardFor = id => { const badge = { hidden: true, dataset: {}, textContent: '' };

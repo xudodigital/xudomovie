@@ -4,7 +4,7 @@ import { parse } from 'parse5';
 const DEFAULT_ORIGIN = 'https://dramatap.app';
 const PROVIDER = 'dramatap';
 const ID = /^[1-9]\d{0,11}$/;
-export const SERIAL_ROUTES = ['catalog', 'search', 'detail', 'episodes'];
+export const SERIAL_ROUTES = ['catalog', 'search', 'detail', 'episodes', 'views'];
 class ProviderError extends Error {
     constructor(code, status = 502) { super(code); this.code = code; this.status = status; }
 }
@@ -149,8 +149,8 @@ export async function handleSerialRequest(context, route) {
     const q = (query.get('q') || '').trim();
     const feed = query.get('feed') || 'trending';
     const page = query.has('page') ? Number(query.get('page')) : 0;
-    if (['detail', 'episodes'].includes(route) && !ID.test(id)) return response({ code: 'INVALID_ID' }, 400);
-    if (route === 'search' && (!q || q.length > 100)) return response({ code: 'INVALID_QUERY' }, 400);
+    if (['detail', 'episodes', 'views'].includes(route) && !ID.test(id)) return response({ code: 'INVALID_ID' }, 400);
+    if (['search', 'views'].includes(route) && (!q || q.length > 100)) return response({ code: 'INVALID_QUERY' }, 400);
     if (route === 'catalog' && !['trending', 'latest'].includes(feed)) return response({ code: 'INVALID_FEED' }, 400);
     // Only the latest feed is paginated upstream (/new/{page}); trending is a single page.
     if (query.has('page') && (route !== 'catalog' || !Number.isInteger(page) || page < 1 || page > 50 || (feed === 'trending' && page > 1))) return response({ code: 'INVALID_PAGE' }, 400);
@@ -158,7 +158,8 @@ export async function handleSerialRequest(context, route) {
     let origin;
     try { const url = new URL(configured); if (!safeMediaURL(configured) || url.origin !== configured) throw new Error(); origin = url.origin; }
     catch { return response({ code: 'PROVIDER_NOT_CONFIGURED' }, 503); }
-    const ttl = route === 'episodes' ? 0 : 300;
+    // Play counts barely move, so they are cached longer than the catalogue.
+    const ttl = route === 'episodes' ? 0 : route === 'views' ? 3600 : 300;
     try {
         const cache = ttl && typeof caches !== 'undefined' ? caches.default : null;
         let cacheKey;
@@ -173,6 +174,8 @@ export async function handleSerialRequest(context, route) {
         else if (route === 'catalog' && page) data = { provider, page, hasMore: false, items: parseCatalogHTML(await upstream(origin, '/', {}, 'html'), feed) };
         else if (route === 'catalog') data = { provider, items: parseCatalogHTML(await upstream(origin, '/', {}, 'html'), feed) };
         if (route === 'search') data = { provider, items: normalizeSearch(await upstream(origin, '/api/search', { q }, 'json')) };
+        // DramaTap only exposes play counts in search results: look the title up and pick this drama's row.
+        if (route === 'views') data = { provider, id, views: normalizeSearch(await upstream(origin, '/api/search', { q }, 'json')).find(item => item.id === id)?.views || 0 };
         if (route === 'detail') data = parseDetailHTML(await upstream(origin, `/d/${id}`, {}, 'html'), id);
         if (route === 'episodes') data = { provider, id, episodes: normalizeEpisodes(await upstream(origin, '/api/episodes', { id }, 'json')) };
         const result = response(data, 200, ttl);

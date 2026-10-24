@@ -42,6 +42,48 @@
         const count = Number.isFinite(item.episodeCount) && item.episodeCount > 0 ? item.episodeCount : 0;
         return `<div class="content-card sd-serial-card" data-sd-id="${item.id}"><a class="sd-card-link" href="${esc(href)}"><div class="sd-serial-poster">${poster ? `<img src="${esc(poster)}" alt="${esc(item.title)}" loading="lazy" referrerpolicy="no-referrer">` : '<span class="sd-poster-placeholder" aria-hidden="true">▶</span>'}${count ? `<span class="sd-duration">${count} ${t.sdEpisodes}</span>` : ''}${viewsHTML(item, t)}</div><div class="card-info"><div class="card-title">${esc(item.title)}</div><div class="card-year">${esc(t.shortDramaSection)}</div>${progressHTML(item, t)}</div></a><button type="button" class="card-fav-btn ${saved ? 'active' : ''}" data-fav-id="${item.id}" data-fav-type="shortdrama" data-fav-title="${encodeURIComponent(item.title)}" data-fav-poster="${encodeURIComponent(poster)}" data-fav-episodes="${count}" aria-pressed="${saved}" aria-label="${esc(item.title)}">${saved ? HEART_FILLED : HEART_OUTLINE}</button></div>`;
     }
+    // The catalogue feeds carry no play counts, so cards that scroll into view look theirs up (4 at a time).
+    const viewsCache = new Map(), viewsQueue = [];
+    let viewsActive = 0, viewsObserver;
+    function showViews(card, views) {
+        const poster = card.querySelector('.sd-serial-poster');
+        if (!poster || poster.querySelector('.sd-views')) return;
+        const html = viewsHTML({ views }, texts());
+        if (html) poster.insertAdjacentHTML('beforeend', html);
+    }
+    async function resolveViews(card) {
+        const id = card.dataset.sdId, title = card.querySelector('.card-title')?.textContent || '';
+        if (!viewsCache.has(id)) viewsCache.set(id, request('views', { provider: 'dramatap', id, q: title.slice(0, 100) }).then(data => Number(data.views) || 0, () => { viewsCache.delete(id); return 0; }));
+        showViews(card, await viewsCache.get(id));
+    }
+    function pumpViews() {
+        while (viewsActive < 4 && viewsQueue.length) {
+            const card = viewsQueue.shift();
+            viewsObserver?.unobserve(card);
+            if (!card.isConnected) continue;
+            viewsActive++;
+            resolveViews(card).finally(() => { viewsActive--; pumpViews(); });
+        }
+    }
+    function watchCard(card) {
+        if (card.dataset.viewsWatched || card.querySelector('.sd-views')) return;
+        card.dataset.viewsWatched = '1';
+        if (typeof IntersectionObserver !== 'function') return;
+        viewsObserver ||= new IntersectionObserver(entries => {
+            for (const { target, isIntersecting } of entries) {
+                const queued = viewsQueue.indexOf(target);
+                if (isIntersecting && queued === -1) viewsQueue.push(target);
+                else if (!isIntersecting && queued !== -1) viewsQueue.splice(queued, 1);
+            }
+            pumpViews();
+        }, { rootMargin: '200px' });
+        viewsObserver.observe(card);
+    }
+    if (typeof MutationObserver === 'function' && root.document?.documentElement) {
+        const scan = node => { if (node.nodeType === 1) { if (node.matches?.('.sd-serial-card')) watchCard(node); node.querySelectorAll?.('.sd-serial-card').forEach(watchCard); } };
+        new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(scan))).observe(root.document.documentElement, { childList: true, subtree: true });
+        root.document.querySelectorAll?.('.sd-serial-card').forEach(watchCard);
+    }
     // Rows that main.js does not delegate (homepage row, watch-page recommendations) toggle favourites here.
     function bindFavorites(container) {
         container.addEventListener('click', event => {
@@ -142,7 +184,9 @@
             // Vertical video is labelled by its short side (720x1280 is 720p).
             const height = Math.min(video.videoWidth || Infinity, video.videoHeight || Infinity);
             if (!resolution || !Number.isFinite(height)) return;
-            resolution.textContent = `${[2160, 1440, 1080, 720, 480, 360].find(h => height >= h * 0.9) || height}p`; resolution.style.display = '';
+            const lines = [2160, 1440, 1080, 720, 480, 360].find(h => height >= h * 0.9) || height;
+            // Standard names: 1080p is Full HD, 720p is HD.
+            resolution.textContent = { 1080: 'FHD', 720: 'HD' }[lines] || `${lines}p`; resolution.style.display = '';
         };
         document.getElementById('detail-year').textContent = t.shortDramaSection;
         document.getElementById('detail-runtime').textContent = '';
