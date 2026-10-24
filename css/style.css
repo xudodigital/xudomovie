@@ -1364,6 +1364,8 @@ a {
     pointer-events: none;
 }
 
+#media-type-toggle.tabs-init::before { transition: none; }
+
 #media-type-toggle .server-btn {
     text-align    : center;
     background    : transparent !important;
@@ -4065,3 +4067,43 @@ a {
 [data-theme="light"] .xp-pill{border-color:rgba(0,0,0,.1);background:rgba(0,0,0,.03);color:#555;}
 [data-theme="light"] .xp-pill:hover{background:rgba(0,0,0,.08);color:#111;}
 
+
+.sd-duration {
+    position: absolute; right: 8px; bottom: 8px; padding: 2px 7px;
+    background: rgba(0, 0, 0, 0.8); color: #fff; border-radius: 4px;
+    font-size: 0.75rem; font-weight: 600;
+}
+
+/* DramaTap short dramas: cards match the movie/TV card size (160x240 poster); playback reuses watch.html. */
+.sd-card-link { display: block; color: inherit; text-decoration: none; }
+.media-grid .sd-serial-card { width: 100%; min-width: 0; }
+.sd-serial-poster { position: relative; height: 240px; background: #222; overflow: hidden; border-radius: 8px; }
+.content-card.sd-serial-card img { height: 100%; }
+.sd-serial-card .card-year { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sd-poster-placeholder { display: grid; height: 100%; place-items: center; color: #aaa; font-size: 2rem; }
+.sd-stream-retry { padding: 8px 14px; border-radius: 8px; border: 0; background: var(--main-red); color: #fff; cursor: pointer; font: inherit; font-size: .85rem; }
+.sd-serial-page :focus-visible, .sd-serial-card:focus-visible { outline: 3px solid var(--main-red); outline-offset: 3px; }
+.sd-watch-page #player-container { padding-top: 0; aspect-ratio: auto; height: min(72vh, 680px); min-height: 260px; }
+.sd-watch-video { object-fit: contain; background: #000; }
+.sd-watch-page #server-selector { display: flex; flex-wrap: nowrap; justify-content: space-between; align-items: center; gap: 12px; width: 100%; }
+.sd-watch-page .sd-now { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.sd-watch-page .sd-play-status { font-size: 1.05rem; font-weight: 700; color: var(--text-white); }
+.sd-episode-nav { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 8px 18px; border-radius: 50px; border: 1px solid #444; background: transparent; color: #fff; font-family: "Saira", sans-serif; font-size: .9rem; font-weight: 600; cursor: pointer; transition: background .2s ease, border-color .2s ease, transform .2s ease; white-space: nowrap; }
+.sd-episode-nav:hover:not(:disabled) { background: rgba(255,255,255,.1); border-color: #777; }
+.sd-episode-nav-next { background: var(--main-red); border-color: var(--main-red); }
+.sd-episode-nav-next:hover:not(:disabled) { background: #f6111c; border-color: #f6111c; transform: translateX(2px); }
+.sd-episode-nav:focus-visible { outline: 2px solid var(--main-red); outline-offset: 3px; }
+.sd-episode-nav:disabled { opacity: .35; cursor: not-allowed; }
+.sd-episode-nav-next:disabled { background: transparent; border-color: #444; }
+[data-theme="light"] .sd-play-status { color: #111; }
+[data-theme="light"] .sd-episode-nav { color: #111; border-color: rgba(0,0,0,.25); }
+[data-theme="light"] .sd-episode-nav:hover:not(:disabled) { background: rgba(0,0,0,.06); }
+[data-theme="light"] .sd-episode-nav-next { color: #fff; border-color: var(--main-red); }
+.sd-watch-page button:disabled { opacity: .45; cursor: default; }
+.search-poster-placeholder { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 60px; border-radius: 4px; background: var(--bg-main); color: var(--text-muted); }
+.search-source-notice { margin: 0 0 18px; color: var(--text-muted); font-size: .9rem; }
+@media (max-width: 650px) {
+    .sd-watch-page #player-container { height: min(65vh, 620px); }
+    .sd-watch-page .sd-episode-nav { padding: 8px; min-width: 44px; }
+    .sd-watch-page .sd-episode-nav span { display: none; }
+}

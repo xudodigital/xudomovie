@@ -193,3 +193,32 @@ test('Quality checks never run more than four at a time and skip cards that leav
     assert.equal(cards.filter(card => card.dataset.qualitySeen === '1').length, 7);
     assert.equal(running, 0);
 });
+
+test('Short drama row is catalogue-only: info link, TMDB keywords and all 19 translations', () => {
+    const { context } = loadApp();
+    const params = new URLSearchParams(vm.runInContext('SHORT_DRAMA_ENDPOINT', context).split('?')[1]);
+    assert.equal(params.get('with_keywords'), '383994|356983');
+    const drama = { ...tv, id: 293371 };
+    const card = context.createCardHTML({ ...drama, _info: true }, 'tv');
+    assert.match(card, /data-href="watch\.html\?type=tv&id=293371&info=1"/);
+    assert.doesNotMatch(context.createCardHTML(drama, 'tv'), /info=1/);
+    const translations = context.window.XUDO_I18N.TRANSLATIONS;
+    assert.equal(Object.keys(translations).length, 19);
+    for (const [locale, labels] of Object.entries(translations))
+        for (const key of ['shortDramaSection', 'shortDramaInfoNotice']) assert.ok(labels[key], `${locale}:${key}`);
+});
+
+test('Info-only notice replaces the player and hides server controls', () => {
+    const container = { style: { cssText: '' }, innerHTML: '' }, bar = { style: {} };
+    const { context } = loadApp({ 'player-container': container, 'control-bar': bar });
+    context.showInfoOnlyNotice();
+    assert.match(container.innerHTML, /info-only-notice/);
+    assert.doesNotMatch(container.innerHTML, /<iframe/);
+    assert.equal(bar.style.display, 'none');
+});
+
+test('Every language has the short drama row, info row and unavailable labels', () => {
+    const { context } = loadApp();
+    for (const [locale, labels] of Object.entries(context.window.XUDO_I18N.TRANSLATIONS))
+        for (const key of ['shortDramaSection', 'shortDramaInfoSection', 'shortDramaUnavailable']) assert.ok(labels[key], `${locale}:${key}`);
+});

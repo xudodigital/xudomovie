@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="robots" content="noindex, nofollow">
+        <title>Short Drama - XUDOMovie</title>
+        <link rel="canonical" href="https://xudomovie.us/">
+        <script>
+            // Legacy links: serial IDs open the watch page; everything else (including old YouTube ?v= links) opens the homepage row.
+            const params = new URLSearchParams(location.search);
+            const target = new URL('index.html', location.href);
+            if (/^[1-9]\d{0,11}$/.test(params.get('id') || '') && (!params.has('provider') || params.get('provider') === 'dramatap')) {
+                target.pathname = target.pathname.replace(/index\.html$/, 'watch.html');
+                target.searchParams.set('type', 'shortdrama');
+                target.searchParams.set('id', params.get('id'));
+                target.searchParams.set('e', /^[1-9]\d{0,11}$/.test(params.get('ep') || '') ? params.get('ep') : '1');
+            } else {
+                if (params.get('q')) target.searchParams.set('search', params.get('q'));
+                if (!params.get('q')) target.hash = 'sec-short-drama';
+            }
+            location.replace(target.href);
+        </script>
+        <noscript><meta http-equiv="refresh" content="0; url=index.html#sec-short-drama"></noscript>
+    </head>
+    <body><a href="index.html#sec-short-drama">Short Drama</a></body>
+</html>

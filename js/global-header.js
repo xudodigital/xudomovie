@@ -66,9 +66,9 @@ const GLOBAL_HEADER_CONTENT = `
             type="search"
             id="search-input"
             class="search-input"
-            placeholder="Search movies or TV shows…"
+            placeholder="Search movies, TV shows or short dramas…"
             autocomplete="off"
-            aria-label="Search movies or TV shows"
+            aria-label="Search movies, TV shows or short dramas"
         >
         <button id="clear-btn" class="search-clear" aria-label="Clear search" title="Clear">✕</button>
         <button class="search-btn" aria-label="Submit search">${ICON_SEARCH}</button>

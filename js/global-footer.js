@@ -2,7 +2,7 @@
 
 const _FOOTER_LANG = localStorage.getItem('xudo_lang') || 'en-US';
 
-const _FOOTER_TRANS = window.XUDO_I18N.FOOTER_TRANS; // moved to js/i18n/translations.js (single source of truth)
+const _FOOTER_TRANS = window.XUDO_I18N.FOOTER_TRANS;
 
 const _ft   = _FOOTER_TRANS[_FOOTER_LANG] || _FOOTER_TRANS['en-US'];
 const _main = (window.XUDO_I18N.TRANSLATIONS[_FOOTER_LANG] || window.XUDO_I18N.TRANSLATIONS['en-US']);
@@ -13,6 +13,7 @@ const FOOTER_COLS = [
         links   : [
             { label: _main.movPopular,      href: 'index.html#sec-latest'    },
             { label: _main.latestTvSection, href: 'index.html#sec-latest-tv' },
+            { label: _main.shortDramaSection, href: 'index.html#sec-short-drama' },
             { label: _main.animeSection,    href: 'index.html#sec-anime'     },
             { label: _main.appleSection,    href: 'index.html#sec-apple'     },
             { label: _main.disneySection,   href: 'index.html#sec-disney'    },
