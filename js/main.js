@@ -1393,9 +1393,6 @@ async function loadAllSections() {
         { t: TEXTS.hboSection,       tk: 'hboSection',       u: `/discover/tv?with_networks=49&sort_by=first_air_date.desc&first_air_date.lte=${today}`,                                        k: 'tv',    secId: 'sec-hbo'      },
         { t: TEXTS.netflixSection,   tk: 'netflixSection',   u: `/discover/tv?with_networks=213&sort_by=first_air_date.desc&first_air_date.lte=${today}`,                                       k: 'tv',    secId: 'sec-netflix'  },
         { t: TEXTS.primeSection,     tk: 'primeSection',     u: `/discover/tv?with_networks=1024&sort_by=first_air_date.desc&first_air_date.lte=${today}`,                                      k: 'tv',    secId: 'sec-prime'    },
-        { t: TEXTS.chinese,          tk: 'chinese',          u: '/discover/tv?with_origin_country=CN&sort_by=popularity.desc',                                                                  k: 'tv',    secId: 'sec-chinese',   mixedCountry: 'with_origin_country=CN' },
-        { t: TEXTS.indianSection,    tk: 'indianSection',    u: '/discover/tv?with_origin_country=IN&sort_by=popularity.desc',                                                                 k: 'tv',    secId: 'sec-indian',    mixedCountry: 'with_origin_country=IN' },
-        { t: TEXTS.korean,           tk: 'korean',           u: '/discover/tv?with_origin_country=KR&sort_by=popularity.desc',                                                                 k: 'tv',    secId: 'sec-korean',    mixedCountry: 'with_origin_country=KR' },
     ];
 
     const promises = sections.map(async (source) => {

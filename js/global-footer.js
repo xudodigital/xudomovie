@@ -20,9 +20,6 @@ const FOOTER_COLS = [
             { label: _main.hboSection,      href: 'index.html#sec-hbo'       },
             { label: _main.netflixSection,  href: 'index.html#sec-netflix'   },
             { label: _main.primeSection,    href: 'index.html#sec-prime'     },
-            { label: _main.chinese,          href: 'index.html#sec-chinese'   },
-            { label: _main.indianSection,    href: 'index.html#sec-indian'    },
-            { label: _main.korean,           href: 'index.html#sec-korean'    },
         ],
     },
     {
