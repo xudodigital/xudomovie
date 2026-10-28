@@ -78,6 +78,18 @@ test('Mixed home sections discard invalid items before taking the newest thirty'
     assert.ok(requested.every(url => url.includes('vote_average.gte=0.1') && url.includes('vote_count.gte=1')));
 });
 
+test('Homepage short drama uses the paginated latest feed', async () => {
+    const { context } = loadApp();
+    let request;
+    const item = { id: '123', title: 'Drama', provider: 'dramatap' };
+    context.fetch = async url => { request = new URL(url, 'https://example.test'); return { ok: true, json: async () => ({ items: [item] }) }; };
+    const result = await context.fetchShortDramaFeed({ serial: true });
+    assert.equal(request.pathname, '/api/shortdrama/catalog');
+    assert.equal(request.searchParams.get('feed'), 'latest');
+    assert.equal(request.searchParams.get('page'), '1');
+    assert.equal(result.results[0].id, item.id);
+});
+
 test('Browse requests retain eligibility guards after advanced filters and reject invalid results', async () => {
     const grid = { innerHTML: '', insertAdjacentHTML(_position, html) { this.innerHTML += html; } };
     const button = { style: {} };

@@ -1370,7 +1370,7 @@ async function fetchMixedCountrySection(s, today) {
 
 // Short dramas come from DramaTap (js/short-serial.js); the homepage row is mounted by renderShortDramaRow.
 async function fetchShortDramaFeed(source) {
-    const res = await fetch('/api/shortdrama/catalog?provider=dramatap&feed=latest');
+    const res = await fetch('/api/shortdrama/catalog?provider=dramatap&feed=latest&page=1');
     if (!res.ok) throw new Error('Short drama feed failed');
     const data = await res.json();
     if (!Array.isArray(data.items) || !data.items.length) throw new Error('Short drama feed empty');
